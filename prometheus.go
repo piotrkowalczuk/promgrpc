@@ -1,6 +1,7 @@
 package promgrpc
 
 import (
+	"net"
 	"strings"
 	"time"
 
@@ -19,6 +20,14 @@ type Interceptor struct {
 func NewInterceptor(labels prometheus.Labels) *Interceptor {
 	return &Interceptor{
 		monitoring: initMonitoring(labels),
+	}
+}
+
+// Dialer ...
+func (i *Interceptor) Dialer(f func(string, time.Duration) (net.Conn, error)) func(string, time.Duration) (net.Conn, error) {
+	return func(addr string, timeout time.Duration) (net.Conn, error) {
+		i.monitoring.dialer.WithLabelValues(addr).Inc()
+		return f(addr, timeout)
 	}
 }
 
@@ -141,6 +150,7 @@ func (i *Interceptor) StreamServer() grpc.StreamServerInterceptor {
 }
 
 type monitoring struct {
+	dialer *prometheus.CounterVec
 	server *monitor
 	client *monitor
 }
@@ -154,6 +164,16 @@ type monitor struct {
 }
 
 func initMonitoring(constLabels prometheus.Labels) *monitoring {
+	dialer := prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace:   "grpc",
+			Subsystem:   "client",
+			Name:        "reconnects_total",
+			Help:        "Total number of reconnects made by client.",
+			ConstLabels: constLabels,
+		},
+		[]string{"address"},
+	)
 	serverRequests := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Namespace:   "grpc",
@@ -204,6 +224,9 @@ func initMonitoring(constLabels prometheus.Labels) *monitoring {
 		},
 		[]string{"service", "handler", "code", "handler_type"},
 	)
+
+	// TODO: re-implement for prometheus v0.9.0
+	dialer = prometheus.MustRegisterOrGet(dialer).(*prometheus.CounterVec)
 
 	// TODO: re-implement for prometheus v0.9.0
 	serverRequests = prometheus.MustRegisterOrGet(serverRequests).(*prometheus.CounterVec)
@@ -271,6 +294,7 @@ func initMonitoring(constLabels prometheus.Labels) *monitoring {
 	clientErrors = prometheus.MustRegisterOrGet(clientErrors).(*prometheus.CounterVec)
 
 	return &monitoring{
+		dialer: dialer,
 		server: &monitor{
 			requests:         serverRequests,
 			requestDuration:  serverRequestDuration,
