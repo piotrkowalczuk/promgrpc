@@ -10,6 +10,15 @@ import (
 	"google.golang.org/grpc"
 )
 
+func ExampleInterceptor_Dialer() {
+	interceptor := promgrpc.NewInterceptor(nil)
+
+	var opts []grpc.DialOption
+	opts = append(opts, grpc.WithDialer(interceptor.Dialer(func(addr string, timeout time.Duration) (net.Conn, error) {
+		return net.DialTimeout("tcp", addr, timeout)
+	})))
+}
+
 func TestInterceptor_Dialer(t *testing.T) {
 	interceptor := promgrpc.NewInterceptor(nil)
 	fn := interceptor.Dialer(func(addr string, timeout time.Duration) (net.Conn, error) {
