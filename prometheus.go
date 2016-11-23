@@ -17,9 +17,9 @@ type Interceptor struct {
 }
 
 // NewInterceptor ...
-func NewInterceptor(labels prometheus.Labels) *Interceptor {
+func NewInterceptor() *Interceptor {
 	return &Interceptor{
-		monitoring: initMonitoring(labels),
+		monitoring: initMonitoring(),
 	}
 }
 
@@ -163,64 +163,58 @@ type monitor struct {
 	errors           *prometheus.CounterVec
 }
 
-func initMonitoring(constLabels prometheus.Labels) *monitoring {
+func initMonitoring() *monitoring {
 	dialer := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Namespace:   "grpc",
-			Subsystem:   "client",
-			Name:        "reconnects_total",
-			Help:        "Total number of reconnects made by client.",
-			ConstLabels: constLabels,
+			Namespace: "grpc",
+			Subsystem: "client",
+			Name:      "reconnects_total",
+			Help:      "Total number of reconnects made by client.",
 		},
 		[]string{"address"},
 	)
 	serverRequests := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Namespace:   "grpc",
-			Subsystem:   "server",
-			Name:        "requests_total",
-			Help:        "Total number of RPC requests received by server.",
-			ConstLabels: constLabels,
+			Namespace: "grpc",
+			Subsystem: "server",
+			Name:      "requests_total",
+			Help:      "Total number of RPC requests received by server.",
 		},
 		[]string{"service", "handler", "code", "handler_type"},
 	)
 	serverReceivedMessages := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Namespace:   "grpc",
-			Subsystem:   "server",
-			Name:        "received_messages_total",
-			Help:        "Total number of RPC messages received by server.",
-			ConstLabels: constLabels,
+			Namespace: "grpc",
+			Subsystem: "server",
+			Name:      "received_messages_total",
+			Help:      "Total number of RPC messages received by server.",
 		},
 		[]string{"service", "handler"},
 	)
 	serverSendMessages := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Namespace:   "grpc",
-			Subsystem:   "server",
-			Name:        "send_messages_total",
-			Help:        "Total number of RPC messages send by server.",
-			ConstLabels: constLabels,
+			Namespace: "grpc",
+			Subsystem: "server",
+			Name:      "send_messages_total",
+			Help:      "Total number of RPC messages send by server.",
 		},
 		[]string{"service", "handler"},
 	)
 	serverRequestDuration := prometheus.NewSummaryVec(
 		prometheus.SummaryOpts{
-			Namespace:   "grpc",
-			Subsystem:   "server",
-			Name:        "request_duration_microseconds",
-			Help:        "The RPC request latencies in microseconds on server side.",
-			ConstLabels: constLabels,
+			Namespace: "grpc",
+			Subsystem: "server",
+			Name:      "request_duration_microseconds",
+			Help:      "The RPC request latencies in microseconds on server side.",
 		},
 		[]string{"service", "handler", "code", "handler_type"},
 	)
 	serverErrors := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Namespace:   "grpc",
-			Subsystem:   "server",
-			Name:        "errors_total",
-			Help:        "Total number of errors that happen during RPC calles on server side.",
-			ConstLabels: constLabels,
+			Namespace: "grpc",
+			Subsystem: "server",
+			Name:      "errors_total",
+			Help:      "Total number of errors that happen during RPC calles on server side.",
 		},
 		[]string{"service", "handler", "code", "handler_type"},
 	)
@@ -237,51 +231,46 @@ func initMonitoring(constLabels prometheus.Labels) *monitoring {
 
 	clientRequests := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Namespace:   "grpc",
-			Subsystem:   "client",
-			Name:        "requests_total",
-			Help:        "Total number of RPC requests made by client.",
-			ConstLabels: constLabels,
+			Namespace: "grpc",
+			Subsystem: "client",
+			Name:      "requests_total",
+			Help:      "Total number of RPC requests made by client.",
 		},
 		[]string{"service", "method", "code", "method_type"},
 	)
 	clientReceivedMessages := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Namespace:   "grpc",
-			Subsystem:   "client",
-			Name:        "received_messages_total",
-			Help:        "Total number of RPC messages received.",
-			ConstLabels: constLabels,
+			Namespace: "grpc",
+			Subsystem: "client",
+			Name:      "received_messages_total",
+			Help:      "Total number of RPC messages received.",
 		},
 		[]string{"service", "method"},
 	)
 	clientSendMessages := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Namespace:   "grpc",
-			Subsystem:   "client",
-			Name:        "send_messages_total",
-			Help:        "Total number of RPC messages send.",
-			ConstLabels: constLabels,
+			Namespace: "grpc",
+			Subsystem: "client",
+			Name:      "send_messages_total",
+			Help:      "Total number of RPC messages send.",
 		},
 		[]string{"service", "method"},
 	)
 	clientRequestDuration := prometheus.NewSummaryVec(
 		prometheus.SummaryOpts{
-			Namespace:   "grpc",
-			Subsystem:   "client",
-			Name:        "request_duration_microseconds",
-			Help:        "The RPC request latencies in microseconds.",
-			ConstLabels: constLabels,
+			Namespace: "grpc",
+			Subsystem: "client",
+			Name:      "request_duration_microseconds",
+			Help:      "The RPC request latencies in microseconds.",
 		},
 		[]string{"service", "method", "code", "method_type"},
 	)
 	clientErrors := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Namespace:   "grpc",
-			Subsystem:   "client",
-			Name:        "errors_total",
-			Help:        "Total number of errors that happen during RPC calles.",
-			ConstLabels: constLabels,
+			Namespace: "grpc",
+			Subsystem: "client",
+			Name:      "errors_total",
+			Help:      "Total number of errors that happen during RPC calles.",
 		},
 		[]string{"service", "method", "code", "method_type"},
 	)
