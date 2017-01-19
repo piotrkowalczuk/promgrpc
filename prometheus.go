@@ -11,6 +11,62 @@ import (
 	"google.golang.org/grpc/codes"
 )
 
+func RegisterInterceptor(s *grpc.Server, i *Interceptor) (err error) {
+	infos := s.GetServiceInfo()
+	for sn, info := range infos {
+		for _, m := range info.Methods {
+			t := handlerType(m.IsClientStream, m.IsServerStream)
+
+			for c := uint32(0); c <=15; c++{
+				requestLabels := prometheus.Labels{
+					"service":     sn,
+					"handler":      m.Name,
+					"code":        codes.Code(c).String(),
+					"type": t,
+				}
+				messageLabels := prometheus.Labels{
+					"service":     sn,
+					"handler":      m.Name,
+				}
+
+				// client
+				if _, err = i.monitoring.client.errors.GetMetricWith(requestLabels); err != nil {
+					return err
+				}
+				if _, err = i.monitoring.client.requests.GetMetricWith(requestLabels); err != nil {
+					return err
+				}
+				if _, err = i.monitoring.client.requestDuration.GetMetricWith(requestLabels); err != nil {
+					return err
+				}
+				if _, err = i.monitoring.client.messagesReceived.GetMetricWith(messageLabels); err != nil {
+					return err
+				}
+				if _, err = i.monitoring.client.messagesSend.GetMetricWith(messageLabels); err != nil {
+					return err
+				}
+				// server
+				if _, err = i.monitoring.server.errors.GetMetricWith(requestLabels); err != nil {
+					return err
+				}
+				if _, err = i.monitoring.server.requests.GetMetricWith(requestLabels); err != nil {
+					return err
+				}
+				if _, err = i.monitoring.server.requestDuration.GetMetricWith(requestLabels); err != nil {
+					return err
+				}
+				if _, err = i.monitoring.server.messagesReceived.GetMetricWith(messageLabels); err != nil {
+					return err
+				}
+				if _, err = i.monitoring.server.messagesSend.GetMetricWith(messageLabels); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
 // Interceptor ...
 type Interceptor struct {
 	monitoring *monitoring
@@ -43,9 +99,9 @@ func (i *Interceptor) UnaryClient() grpc.UnaryClientInterceptor {
 		service, method := split(method)
 		labels := prometheus.Labels{
 			"service":     service,
-			"method":      method,
+			"handler":      method,
 			"code":        code.String(),
-			"method_type": "unary",
+			"type": "unary",
 		}
 		if err != nil && code != codes.OK {
 			monitor.errors.With(labels).Add(1)
@@ -71,9 +127,9 @@ func (i *Interceptor) StreamClient() grpc.StreamClientInterceptor {
 		service, method := split(method)
 		labels := prometheus.Labels{
 			"service":     service,
-			"method":      method,
+			"handler":      method,
 			"code":        code.String(),
-			"method_type": handlerType(desc.ClientStreams, desc.ServerStreams),
+			"type": handlerType(desc.ClientStreams, desc.ServerStreams),
 		}
 		if err != nil && code != codes.OK {
 			monitor.errors.With(labels).Add(1)
@@ -85,7 +141,7 @@ func (i *Interceptor) StreamClient() grpc.StreamClientInterceptor {
 
 		return &monitoredClientStream{ClientStream: client, monitor: monitor, labels: prometheus.Labels{
 			"service": service,
-			"method":  method,
+			"handler":  method,
 		}}, nil
 	}
 }
@@ -104,7 +160,7 @@ func (i *Interceptor) UnaryServer() grpc.UnaryServerInterceptor {
 			"service":      service,
 			"handler":      method,
 			"code":         code.String(),
-			"handler_type": "unary",
+			"type": "unary",
 		}
 		if err != nil && code != codes.OK {
 			monitor.errors.With(labels).Add(1)
@@ -135,7 +191,7 @@ func (i *Interceptor) StreamServer() grpc.StreamServerInterceptor {
 			"service":      service,
 			"handler":      method,
 			"code":         code.String(),
-			"handler_type": handlerType(info.IsClientStream, info.IsServerStream),
+			"type": handlerType(info.IsClientStream, info.IsServerStream),
 		}
 		if err != nil && code != codes.OK {
 			monitor.errors.With(labels).Add(1)
@@ -180,7 +236,7 @@ func initMonitoring() *monitoring {
 			Name:      "requests_total",
 			Help:      "Total number of RPC requests received by server.",
 		},
-		[]string{"service", "handler", "code", "handler_type"},
+		[]string{"service", "handler", "code", "type"},
 	)
 	serverReceivedMessages := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
@@ -207,7 +263,7 @@ func initMonitoring() *monitoring {
 			Name:      "request_duration_microseconds",
 			Help:      "The RPC request latencies in microseconds on server side.",
 		},
-		[]string{"service", "handler", "code", "handler_type"},
+		[]string{"service", "handler", "code", "type"},
 	)
 	serverErrors := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
@@ -216,7 +272,7 @@ func initMonitoring() *monitoring {
 			Name:      "errors_total",
 			Help:      "Total number of errors that happen during RPC calles on server side.",
 		},
-		[]string{"service", "handler", "code", "handler_type"},
+		[]string{"service", "handler", "code", "type"},
 	)
 
 	// TODO: re-implement for prometheus v0.9.0
@@ -236,7 +292,7 @@ func initMonitoring() *monitoring {
 			Name:      "requests_total",
 			Help:      "Total number of RPC requests made by client.",
 		},
-		[]string{"service", "method", "code", "method_type"},
+		[]string{"service", "handler", "code", "type"},
 	)
 	clientReceivedMessages := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
@@ -245,7 +301,7 @@ func initMonitoring() *monitoring {
 			Name:      "received_messages_total",
 			Help:      "Total number of RPC messages received.",
 		},
-		[]string{"service", "method"},
+		[]string{"service", "handler"},
 	)
 	clientSendMessages := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
@@ -254,7 +310,7 @@ func initMonitoring() *monitoring {
 			Name:      "send_messages_total",
 			Help:      "Total number of RPC messages send.",
 		},
-		[]string{"service", "method"},
+		[]string{"service", "handler"},
 	)
 	clientRequestDuration := prometheus.NewSummaryVec(
 		prometheus.SummaryOpts{
@@ -263,7 +319,7 @@ func initMonitoring() *monitoring {
 			Name:      "request_duration_microseconds",
 			Help:      "The RPC request latencies in microseconds.",
 		},
-		[]string{"service", "method", "code", "method_type"},
+		[]string{"service", "handler", "code", "type"},
 	)
 	clientErrors := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
@@ -272,7 +328,7 @@ func initMonitoring() *monitoring {
 			Name:      "errors_total",
 			Help:      "Total number of errors that happen during RPC calles.",
 		},
-		[]string{"service", "method", "code", "method_type"},
+		[]string{"service", "handler", "code", "type"},
 	)
 
 	// TODO: re-implement for prometheus v0.9.0

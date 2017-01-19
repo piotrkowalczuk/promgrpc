@@ -69,3 +69,8 @@ func TestInterceptor_StreamClient(t *testing.T) {
 		t.Fatalf("unexpected error: %s", err.Error())
 	}
 }
+
+func TestRegisterInterceptor(t *testing.T) {
+	interceptor := promgrpc.NewInterceptor()
+	promgrpc.RegisterInterceptor(&grpc.Server{},interceptor)
+}
