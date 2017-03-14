@@ -17,16 +17,16 @@ func RegisterInterceptor(s *grpc.Server, i *Interceptor) (err error) {
 		for _, m := range info.Methods {
 			t := handlerType(m.IsClientStream, m.IsServerStream)
 
-			for c := uint32(0); c <=15; c++{
+			for c := uint32(0); c <= 15; c++ {
 				requestLabels := prometheus.Labels{
-					"service":     sn,
-					"handler":      m.Name,
-					"code":        codes.Code(c).String(),
-					"type": t,
+					"service": sn,
+					"handler": m.Name,
+					"code":    codes.Code(c).String(),
+					"type":    t,
 				}
 				messageLabels := prometheus.Labels{
-					"service":     sn,
-					"handler":      m.Name,
+					"service": sn,
+					"handler": m.Name,
 				}
 
 				// client
@@ -98,10 +98,10 @@ func (i *Interceptor) UnaryClient() grpc.UnaryClientInterceptor {
 		code := grpc.Code(err)
 		service, method := split(method)
 		labels := prometheus.Labels{
-			"service":     service,
-			"handler":      method,
-			"code":        code.String(),
-			"type": "unary",
+			"service": service,
+			"handler": method,
+			"code":    code.String(),
+			"type":    "unary",
 		}
 		if err != nil && code != codes.OK {
 			monitor.errors.With(labels).Add(1)
@@ -126,10 +126,10 @@ func (i *Interceptor) StreamClient() grpc.StreamClientInterceptor {
 		code := grpc.Code(err)
 		service, method := split(method)
 		labels := prometheus.Labels{
-			"service":     service,
-			"handler":      method,
-			"code":        code.String(),
-			"type": handlerType(desc.ClientStreams, desc.ServerStreams),
+			"service": service,
+			"handler": method,
+			"code":    code.String(),
+			"type":    handlerType(desc.ClientStreams, desc.ServerStreams),
 		}
 		if err != nil && code != codes.OK {
 			monitor.errors.With(labels).Add(1)
@@ -141,7 +141,7 @@ func (i *Interceptor) StreamClient() grpc.StreamClientInterceptor {
 
 		return &monitoredClientStream{ClientStream: client, monitor: monitor, labels: prometheus.Labels{
 			"service": service,
-			"handler":  method,
+			"handler": method,
 		}}, nil
 	}
 }
@@ -157,10 +157,10 @@ func (i *Interceptor) UnaryServer() grpc.UnaryServerInterceptor {
 		code := grpc.Code(err)
 		service, method := split(info.FullMethod)
 		labels := prometheus.Labels{
-			"service":      service,
-			"handler":      method,
-			"code":         code.String(),
-			"type": "unary",
+			"service": service,
+			"handler": method,
+			"code":    code.String(),
+			"type":    "unary",
 		}
 		if err != nil && code != codes.OK {
 			monitor.errors.With(labels).Add(1)
@@ -188,10 +188,10 @@ func (i *Interceptor) StreamServer() grpc.StreamServerInterceptor {
 		}, monitor: monitor})
 		code := grpc.Code(err)
 		labels := prometheus.Labels{
-			"service":      service,
-			"handler":      method,
-			"code":         code.String(),
-			"type": handlerType(info.IsClientStream, info.IsServerStream),
+			"service": service,
+			"handler": method,
+			"code":    code.String(),
+			"type":    handlerType(info.IsClientStream, info.IsServerStream),
 		}
 		if err != nil && code != codes.OK {
 			monitor.errors.With(labels).Add(1)
@@ -205,10 +205,22 @@ func (i *Interceptor) StreamServer() grpc.StreamServerInterceptor {
 	}
 }
 
+// ServerRegistry returns the prometheus registry with all server metrics
+func (i *Interceptor) ServerRegistry() *prometheus.Registry {
+	return i.monitoring.serverRegistry
+}
+
+// ClientRegistry returns the prometheus registry with all client metrics
+func (i *Interceptor) ClientRegistry() *prometheus.Registry {
+	return i.monitoring.clientRegistry
+}
+
 type monitoring struct {
-	dialer *prometheus.CounterVec
-	server *monitor
-	client *monitor
+	dialer         *prometheus.CounterVec
+	server         *monitor
+	client         *monitor
+	serverRegistry *prometheus.Registry
+	clientRegistry *prometheus.Registry
 }
 
 type monitor struct {
@@ -275,15 +287,14 @@ func initMonitoring() *monitoring {
 		[]string{"service", "handler", "code", "type"},
 	)
 
-	// TODO: re-implement for prometheus v0.9.0
-	dialer = prometheus.MustRegisterOrGet(dialer).(*prometheus.CounterVec)
+	serverRegistry := prometheus.NewRegistry()
 
-	// TODO: re-implement for prometheus v0.9.0
-	serverRequests = prometheus.MustRegisterOrGet(serverRequests).(*prometheus.CounterVec)
-	serverRequestDuration = prometheus.MustRegisterOrGet(serverRequestDuration).(*prometheus.SummaryVec)
-	serverReceivedMessages = prometheus.MustRegisterOrGet(serverReceivedMessages).(*prometheus.CounterVec)
-	serverSendMessages = prometheus.MustRegisterOrGet(serverSendMessages).(*prometheus.CounterVec)
-	serverErrors = prometheus.MustRegisterOrGet(serverErrors).(*prometheus.CounterVec)
+	serverRegistry.MustRegister(dialer)
+	serverRegistry.MustRegister(serverRequests)
+	serverRegistry.MustRegister(serverRequestDuration)
+	serverRegistry.MustRegister(serverReceivedMessages)
+	serverRegistry.MustRegister(serverSendMessages)
+	serverRegistry.MustRegister(serverErrors)
 
 	clientRequests := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
@@ -331,15 +342,17 @@ func initMonitoring() *monitoring {
 		[]string{"service", "handler", "code", "type"},
 	)
 
-	// TODO: re-implement for prometheus v0.9.0
-	clientRequests = prometheus.MustRegisterOrGet(clientRequests).(*prometheus.CounterVec)
-	clientRequestDuration = prometheus.MustRegisterOrGet(clientRequestDuration).(*prometheus.SummaryVec)
-	clientReceivedMessages = prometheus.MustRegisterOrGet(clientReceivedMessages).(*prometheus.CounterVec)
-	clientSendMessages = prometheus.MustRegisterOrGet(clientSendMessages).(*prometheus.CounterVec)
-	clientErrors = prometheus.MustRegisterOrGet(clientErrors).(*prometheus.CounterVec)
+	clientRegistry := prometheus.NewRegistry()
+
+	clientRegistry.MustRegister(clientRequests)
+	clientRegistry.MustRegister(clientRequestDuration)
+	clientRegistry.MustRegister(clientReceivedMessages)
+	clientRegistry.MustRegister(clientSendMessages)
+	clientRegistry.MustRegister(clientErrors)
 
 	return &monitoring{
-		dialer: dialer,
+		dialer:         dialer,
+		serverRegistry: serverRegistry,
 		server: &monitor{
 			requests:         serverRequests,
 			requestDuration:  serverRequestDuration,
@@ -347,6 +360,7 @@ func initMonitoring() *monitoring {
 			messagesSend:     serverSendMessages,
 			errors:           serverErrors,
 		},
+		clientRegistry: clientRegistry,
 		client: &monitor{
 			requests:         clientRequests,
 			requestDuration:  clientRequestDuration,
