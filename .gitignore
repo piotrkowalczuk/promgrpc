@@ -2,3 +2,5 @@
 *.iml
 vendor
 glide.lock
+*.out
+*.log

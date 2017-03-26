@@ -9,9 +9,13 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/peer"
 )
 
 func RegisterInterceptor(s *grpc.Server, i *Interceptor) (err error) {
+	if i.trackPeers {
+		return nil
+	}
 	infos := s.GetServiceInfo()
 	for sn, info := range infos {
 		for _, m := range info.Methods {
@@ -70,12 +74,21 @@ func RegisterInterceptor(s *grpc.Server, i *Interceptor) (err error) {
 // Interceptor ...
 type Interceptor struct {
 	monitoring *monitoring
+	trackPeers bool
+}
+
+// InterceptorOpts ...
+type InterceptorOpts struct {
+	// TrackPeers allow to turn on peer tracking.
+	// For more info about peers please visit https://godoc.org/google.golang.org/grpc/peer.
+	TrackPeers bool
 }
 
 // NewInterceptor ...
-func NewInterceptor() *Interceptor {
+func NewInterceptor(opts InterceptorOpts) *Interceptor {
 	return &Interceptor{
-		monitoring: initMonitoring(),
+		monitoring: initMonitoring(opts.TrackPeers),
+		trackPeers: opts.TrackPeers,
 	}
 }
 
@@ -156,11 +169,15 @@ func (i *Interceptor) UnaryServer() grpc.UnaryServerInterceptor {
 		res, err := handler(ctx, req)
 		code := grpc.Code(err)
 		service, method := split(info.FullMethod)
+
 		labels := prometheus.Labels{
 			"service": service,
 			"handler": method,
 			"code":    code.String(),
 			"type":    "unary",
+		}
+		if i.trackPeers {
+			labels["peer"] = peerValue(ctx)
 		}
 		if err != nil && code != codes.OK {
 			monitor.errors.With(labels).Add(1)
@@ -182,16 +199,33 @@ func (i *Interceptor) StreamServer() grpc.StreamServerInterceptor {
 		start := time.Now()
 
 		service, method := split(info.FullMethod)
-		err := handler(srv, &monitoredServerStream{ServerStream: ss, labels: prometheus.Labels{
+		streamLabels := prometheus.Labels{
 			"service": service,
 			"handler": method,
-		}, monitor: monitor})
+		}
+		if i.trackPeers {
+			if ss != nil {
+				streamLabels["peer"] = peerValue(ss.Context())
+			} else {
+				// mostly for testing purposes
+				streamLabels["peer"] = "nil-server-stream"
+			}
+		}
+		err := handler(srv, &monitoredServerStream{ServerStream: ss, labels: streamLabels, monitor: monitor})
 		code := grpc.Code(err)
 		labels := prometheus.Labels{
 			"service": service,
 			"handler": method,
 			"code":    code.String(),
 			"type":    handlerType(info.IsClientStream, info.IsServerStream),
+		}
+		if i.trackPeers {
+			if ss != nil {
+				labels["peer"] = peerValue(ss.Context())
+			} else {
+				// mostly for testing purposes
+				labels["peer"] = "nil-server-stream"
+			}
 		}
 		if err != nil && code != codes.OK {
 			monitor.errors.With(labels).Add(1)
@@ -231,7 +265,7 @@ type monitor struct {
 	errors           *prometheus.CounterVec
 }
 
-func initMonitoring() *monitoring {
+func initMonitoring(trackPeers bool) *monitoring {
 	dialer := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Namespace: "grpc",
@@ -241,6 +275,7 @@ func initMonitoring() *monitoring {
 		},
 		[]string{"address"},
 	)
+
 	serverRequests := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Namespace: "grpc",
@@ -248,7 +283,7 @@ func initMonitoring() *monitoring {
 			Name:      "requests_total",
 			Help:      "Total number of RPC requests received by server.",
 		},
-		[]string{"service", "handler", "code", "type"},
+		appendIf(trackPeers, []string{"service", "handler", "code", "type"}, "peer"),
 	)
 	serverReceivedMessages := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
@@ -257,7 +292,7 @@ func initMonitoring() *monitoring {
 			Name:      "received_messages_total",
 			Help:      "Total number of RPC messages received by server.",
 		},
-		[]string{"service", "handler"},
+		appendIf(trackPeers, []string{"service", "handler"}, "peer"),
 	)
 	serverSendMessages := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
@@ -266,7 +301,7 @@ func initMonitoring() *monitoring {
 			Name:      "send_messages_total",
 			Help:      "Total number of RPC messages send by server.",
 		},
-		[]string{"service", "handler"},
+		appendIf(trackPeers, []string{"service", "handler"}, "peer"),
 	)
 	serverRequestDuration := prometheus.NewSummaryVec(
 		prometheus.SummaryOpts{
@@ -275,7 +310,7 @@ func initMonitoring() *monitoring {
 			Name:      "request_duration_microseconds",
 			Help:      "The RPC request latencies in microseconds on server side.",
 		},
-		[]string{"service", "handler", "code", "type"},
+		appendIf(trackPeers, []string{"service", "handler", "code", "type"}, "peer"),
 	)
 	serverErrors := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
@@ -284,7 +319,7 @@ func initMonitoring() *monitoring {
 			Name:      "errors_total",
 			Help:      "Total number of errors that happen during RPC calles on server side.",
 		},
-		[]string{"service", "handler", "code", "type"},
+		appendIf(trackPeers, []string{"service", "handler", "code", "type"}, "peer"),
 	)
 
 	serverRegistry := prometheus.NewRegistry()
@@ -433,4 +468,19 @@ func split(name string) (string, string) {
 		return name[1:i], name[i+1:]
 	}
 	return "unknown", "unknown"
+}
+
+func peerValue(ctx context.Context) string {
+	v, ok := peer.FromContext(ctx)
+	if !ok {
+		return "none"
+	}
+	return v.Addr.String()
+}
+
+func appendIf(ok bool, arr []string, val string) []string {
+	if !ok {
+		return arr
+	}
+	return append(arr, val)
 }
