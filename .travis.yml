@@ -6,6 +6,6 @@ install:
   - mkdir -p $HOME/bin
   - tar -vxz -C $HOME/bin --strip=1 -f glide-v0.12.3-linux-amd64.tar.gz
   - export PATH="$HOME/bin:$PATH"
-  - glide install
+  - glide install -v
 script:
   - go test

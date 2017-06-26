@@ -82,7 +82,7 @@ type InterceptorOpts struct {
 	// TrackPeers allow to turn on peer tracking.
 	// For more info about peers please visit https://godoc.org/google.golang.org/grpc/peer.
 	// peer is not bounded dimension so it can cause performance loss.
-	// If its turn on Interceptor will not metrics on startup.
+	// If its turn on Interceptor will not init metrics on startup.
 	TrackPeers bool
 }
 

@@ -7,7 +7,8 @@ import:
 - package: golang.org/x/net
   subpackages:
   - context
+  - http2
 - package: google.golang.org/grpc
-  version: ~1.0.0
+  version: ^1.0.0
   subpackages:
   - codes
