@@ -157,7 +157,7 @@ func (i *Interceptor) StreamClient() grpc.StreamClientInterceptor {
 		return &monitoredClientStream{ClientStream: client, monitor: monitor, labels: prometheus.Labels{
 			"service": service,
 			"handler": method,
-		}}, nil
+		}}, err
 	}
 }
 
