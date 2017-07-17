@@ -84,12 +84,17 @@ type InterceptorOpts struct {
 	// peer is not bounded dimension so it can cause performance loss.
 	// If its turn on Interceptor will not init metrics on startup.
 	TrackPeers bool
+	Registerer prometheus.Registerer
 }
 
 // NewInterceptor ...
 func NewInterceptor(opts InterceptorOpts) *Interceptor {
+	registerer := opts.Registerer
+	if registerer == nil {
+		registerer = prometheus.DefaultRegisterer
+	}
 	return &Interceptor{
-		monitoring: initMonitoring(opts.TrackPeers),
+		monitoring: initMonitoring(registerer, opts.TrackPeers),
 		trackPeers: opts.TrackPeers,
 	}
 }
@@ -241,22 +246,10 @@ func (i *Interceptor) StreamServer() grpc.StreamServerInterceptor {
 	}
 }
 
-// ServerRegistry returns the prometheus registry with all server metrics
-func (i *Interceptor) ServerRegistry() *prometheus.Registry {
-	return i.monitoring.serverRegistry
-}
-
-// ClientRegistry returns the prometheus registry with all client metrics
-func (i *Interceptor) ClientRegistry() *prometheus.Registry {
-	return i.monitoring.clientRegistry
-}
-
 type monitoring struct {
-	dialer         *prometheus.CounterVec
-	server         *monitor
-	client         *monitor
-	serverRegistry *prometheus.Registry
-	clientRegistry *prometheus.Registry
+	dialer *prometheus.CounterVec
+	server *monitor
+	client *monitor
 }
 
 type monitor struct {
@@ -267,7 +260,7 @@ type monitor struct {
 	errors           *prometheus.CounterVec
 }
 
-func initMonitoring(trackPeers bool) *monitoring {
+func initMonitoring(registerer prometheus.Registerer, trackPeers bool) *monitoring {
 	dialer := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Namespace: "grpc",
@@ -324,14 +317,12 @@ func initMonitoring(trackPeers bool) *monitoring {
 		appendIf(trackPeers, []string{"service", "handler", "code", "type"}, "peer"),
 	)
 
-	serverRegistry := prometheus.NewRegistry()
-
-	serverRegistry.MustRegister(dialer)
-	serverRegistry.MustRegister(serverRequests)
-	serverRegistry.MustRegister(serverRequestDuration)
-	serverRegistry.MustRegister(serverReceivedMessages)
-	serverRegistry.MustRegister(serverSendMessages)
-	serverRegistry.MustRegister(serverErrors)
+	registerer.MustRegister(dialer)
+	registerer.MustRegister(serverRequests)
+	registerer.MustRegister(serverRequestDuration)
+	registerer.MustRegister(serverReceivedMessages)
+	registerer.MustRegister(serverSendMessages)
+	registerer.MustRegister(serverErrors)
 
 	clientRequests := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
@@ -379,17 +370,14 @@ func initMonitoring(trackPeers bool) *monitoring {
 		[]string{"service", "handler", "code", "type"},
 	)
 
-	clientRegistry := prometheus.NewRegistry()
-
-	clientRegistry.MustRegister(clientRequests)
-	clientRegistry.MustRegister(clientRequestDuration)
-	clientRegistry.MustRegister(clientReceivedMessages)
-	clientRegistry.MustRegister(clientSendMessages)
-	clientRegistry.MustRegister(clientErrors)
+	registerer.MustRegister(clientRequests)
+	registerer.MustRegister(clientRequestDuration)
+	registerer.MustRegister(clientReceivedMessages)
+	registerer.MustRegister(clientSendMessages)
+	registerer.MustRegister(clientErrors)
 
 	return &monitoring{
-		dialer:         dialer,
-		serverRegistry: serverRegistry,
+		dialer: dialer,
 		server: &monitor{
 			requests:         serverRequests,
 			requestDuration:  serverRequestDuration,
@@ -397,7 +385,6 @@ func initMonitoring(trackPeers bool) *monitoring {
 			messagesSend:     serverSendMessages,
 			errors:           serverErrors,
 		},
-		clientRegistry: clientRegistry,
 		client: &monitor{
 			requests:         clientRequests,
 			requestDuration:  clientRequestDuration,
