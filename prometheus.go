@@ -12,10 +12,14 @@ import (
 	"google.golang.org/grpc/peer"
 )
 
+// RegisterInterceptor preallocates possible dimensions of every metric.
+// If peer tracking is enabled, nothing will happen.
+// If you register interceptor very frequently (for example during tests) it can allocate huge amount of memory.
 func RegisterInterceptor(s *grpc.Server, i *Interceptor) (err error) {
-	if i.trackPeers || i.skipPreallocate {
+	if i.trackPeers {
 		return nil
 	}
+
 	infos := s.GetServiceInfo()
 	for sn, info := range infos {
 		for _, m := range info.Methods {
@@ -81,8 +85,8 @@ func RegisterInterceptor(s *grpc.Server, i *Interceptor) (err error) {
 
 // Interceptor ...
 type Interceptor struct {
-	monitoring                  *monitoring
-	trackPeers, skipPreallocate bool
+	monitoring *monitoring
+	trackPeers bool
 }
 
 // InterceptorOpts ...
@@ -92,22 +96,13 @@ type InterceptorOpts struct {
 	// peer is not bounded dimension so it can cause performance loss.
 	// If its turn on Interceptor will not init metrics on startup.
 	TrackPeers bool
-	// SkipPreallocate if it's true RegisterInterceptor will not go through all possible dimensions to pre allocate metrics.
-	// If you register interceptor very frequently (for example during tests) it can allocate huge amount of memory.
-	SkipPreallocate bool
-	Registerer      prometheus.Registerer
 }
 
-// NewInterceptor ...
+// NewInterceptor implements both prometheus Collector interface and methods required by grpc Interceptor.
 func NewInterceptor(opts InterceptorOpts) *Interceptor {
-	registerer := opts.Registerer
-	if registerer == nil {
-		registerer = prometheus.DefaultRegisterer
-	}
 	return &Interceptor{
-		monitoring:      initMonitoring(registerer, opts.TrackPeers),
-		trackPeers:      opts.TrackPeers,
-		skipPreallocate: opts.SkipPreallocate,
+		monitoring: initMonitoring(opts.TrackPeers),
+		trackPeers: opts.TrackPeers,
 	}
 }
 
@@ -258,6 +253,40 @@ func (i *Interceptor) StreamServer() grpc.StreamServerInterceptor {
 	}
 }
 
+// Describe implements prometheus Collector interface.
+func (i *Interceptor) Describe(in chan<- *prometheus.Desc) {
+	i.monitoring.dialer.Describe(in)
+
+	i.monitoring.server.requests.Describe(in)
+	i.monitoring.server.requestDuration.Describe(in)
+	i.monitoring.server.messagesReceived.Describe(in)
+	i.monitoring.server.messagesSend.Describe(in)
+	i.monitoring.server.errors.Describe(in)
+
+	i.monitoring.client.requests.Describe(in)
+	i.monitoring.client.requestDuration.Describe(in)
+	i.monitoring.client.messagesReceived.Describe(in)
+	i.monitoring.client.messagesSend.Describe(in)
+	i.monitoring.client.errors.Describe(in)
+}
+
+// Collect implements prometheus Collector interface.
+func (i *Interceptor) Collect(in chan<- prometheus.Metric) {
+	i.monitoring.dialer.Collect(in)
+
+	i.monitoring.server.requests.Collect(in)
+	i.monitoring.server.requestDuration.Collect(in)
+	i.monitoring.server.messagesReceived.Collect(in)
+	i.monitoring.server.messagesSend.Collect(in)
+	i.monitoring.server.errors.Collect(in)
+
+	i.monitoring.client.requests.Collect(in)
+	i.monitoring.client.requestDuration.Collect(in)
+	i.monitoring.client.messagesReceived.Collect(in)
+	i.monitoring.client.messagesSend.Collect(in)
+	i.monitoring.client.errors.Collect(in)
+}
+
 type monitoring struct {
 	dialer *prometheus.CounterVec
 	server *monitor
@@ -272,7 +301,7 @@ type monitor struct {
 	errors           *prometheus.CounterVec
 }
 
-func initMonitoring(registerer prometheus.Registerer, trackPeers bool) *monitoring {
+func initMonitoring(trackPeers bool) *monitoring {
 	dialer := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Namespace: "grpc",
@@ -329,13 +358,6 @@ func initMonitoring(registerer prometheus.Registerer, trackPeers bool) *monitori
 		appendIf(trackPeers, []string{"service", "handler", "code", "type"}, "peer"),
 	)
 
-	registerer.MustRegister(dialer)
-	registerer.MustRegister(serverRequests)
-	registerer.MustRegister(serverRequestDuration)
-	registerer.MustRegister(serverReceivedMessages)
-	registerer.MustRegister(serverSendMessages)
-	registerer.MustRegister(serverErrors)
-
 	clientRequests := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Namespace: "grpc",
@@ -381,12 +403,6 @@ func initMonitoring(registerer prometheus.Registerer, trackPeers bool) *monitori
 		},
 		[]string{"service", "handler", "code", "type"},
 	)
-
-	registerer.MustRegister(clientRequests)
-	registerer.MustRegister(clientRequestDuration)
-	registerer.MustRegister(clientReceivedMessages)
-	registerer.MustRegister(clientSendMessages)
-	registerer.MustRegister(clientErrors)
 
 	return &monitoring{
 		dialer: dialer,

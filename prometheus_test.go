@@ -12,9 +12,7 @@ import (
 )
 
 func ExampleInterceptor_Dialer() {
-	interceptor := promgrpc.NewInterceptor(promgrpc.InterceptorOpts{
-		Registerer: prometheus.NewRegistry(),
-	})
+	interceptor := promgrpc.NewInterceptor(promgrpc.InterceptorOpts{})
 
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithDialer(interceptor.Dialer(func(addr string, timeout time.Duration) (net.Conn, error) {
@@ -22,10 +20,19 @@ func ExampleInterceptor_Dialer() {
 	})))
 }
 
+func TestIntercepror_Collector(t *testing.T) {
+	interceptor := promgrpc.NewInterceptor(promgrpc.InterceptorOpts{})
+	req := prometheus.NewRegistry()
+	req.Register(interceptor)
+
+	_, err := req.Gather()
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err.Error())
+	}
+}
+
 func TestInterceptor_Dialer(t *testing.T) {
-	interceptor := promgrpc.NewInterceptor(promgrpc.InterceptorOpts{
-		Registerer: prometheus.NewRegistry(),
-	})
+	interceptor := promgrpc.NewInterceptor(promgrpc.InterceptorOpts{})
 	fn := interceptor.Dialer(func(addr string, timeout time.Duration) (net.Conn, error) {
 		return nil, nil
 	})
@@ -36,10 +43,7 @@ func TestInterceptor_Dialer(t *testing.T) {
 }
 
 func TestInterceptor_UnaryServer(t *testing.T) {
-	interceptor := promgrpc.NewInterceptor(promgrpc.InterceptorOpts{
-		Registerer: prometheus.NewRegistry(),
-		TrackPeers: true,
-	})
+	interceptor := promgrpc.NewInterceptor(promgrpc.InterceptorOpts{TrackPeers: true})
 	_, err := interceptor.UnaryServer()(context.Background(), nil, &grpc.UnaryServerInfo{}, func(ctx context.Context, req interface{}) (interface{}, error) {
 		return nil, nil
 	})
@@ -49,10 +53,7 @@ func TestInterceptor_UnaryServer(t *testing.T) {
 }
 
 func TestInterceptor_StreamServer(t *testing.T) {
-	interceptor := promgrpc.NewInterceptor(promgrpc.InterceptorOpts{
-		Registerer: prometheus.NewRegistry(),
-		TrackPeers: true,
-	})
+	interceptor := promgrpc.NewInterceptor(promgrpc.InterceptorOpts{TrackPeers: true})
 	err := interceptor.StreamServer()(context.Background(), nil, &grpc.StreamServerInfo{}, func(srv interface{}, stream grpc.ServerStream) error {
 		return nil
 	})
@@ -62,9 +63,7 @@ func TestInterceptor_StreamServer(t *testing.T) {
 }
 
 func TestInterceptor_UnaryClient(t *testing.T) {
-	interceptor := promgrpc.NewInterceptor(promgrpc.InterceptorOpts{
-		Registerer: prometheus.NewRegistry(),
-	})
+	interceptor := promgrpc.NewInterceptor(promgrpc.InterceptorOpts{})
 	err := interceptor.UnaryClient()(context.Background(), "method", nil, nil, nil, func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, opts ...grpc.CallOption) error {
 		return nil
 	})
@@ -74,9 +73,7 @@ func TestInterceptor_UnaryClient(t *testing.T) {
 }
 
 func TestInterceptor_StreamClient(t *testing.T) {
-	interceptor := promgrpc.NewInterceptor(promgrpc.InterceptorOpts{
-		Registerer: prometheus.NewRegistry(),
-	})
+	interceptor := promgrpc.NewInterceptor(promgrpc.InterceptorOpts{})
 	_, err := interceptor.StreamClient()(context.Background(), &grpc.StreamDesc{}, nil, "method", func(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, opts ...grpc.CallOption) (grpc.ClientStream, error) {
 		return nil, nil
 	})
@@ -86,9 +83,7 @@ func TestInterceptor_StreamClient(t *testing.T) {
 }
 
 func TestRegisterInterceptor(t *testing.T) {
-	interceptor1 := promgrpc.NewInterceptor(promgrpc.InterceptorOpts{
-		Registerer: prometheus.NewRegistry(),
-	})
+	interceptor1 := promgrpc.NewInterceptor(promgrpc.InterceptorOpts{})
 	promgrpc.RegisterInterceptor(&grpc.Server{}, interceptor1)
 
 	interceptor2 := promgrpc.NewInterceptor(promgrpc.InterceptorOpts{TrackPeers: true})
