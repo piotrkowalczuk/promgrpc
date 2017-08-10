@@ -13,7 +13,7 @@ import (
 )
 
 func RegisterInterceptor(s *grpc.Server, i *Interceptor) (err error) {
-	if i.trackPeers {
+	if i.trackPeers || i.skipPreallocate {
 		return nil
 	}
 	infos := s.GetServiceInfo()
@@ -73,8 +73,8 @@ func RegisterInterceptor(s *grpc.Server, i *Interceptor) (err error) {
 
 // Interceptor ...
 type Interceptor struct {
-	monitoring *monitoring
-	trackPeers bool
+	monitoring                  *monitoring
+	trackPeers, skipPreallocate bool
 }
 
 // InterceptorOpts ...
@@ -84,7 +84,10 @@ type InterceptorOpts struct {
 	// peer is not bounded dimension so it can cause performance loss.
 	// If its turn on Interceptor will not init metrics on startup.
 	TrackPeers bool
-	Registerer prometheus.Registerer
+	// SkipPreallocate if it's true RegisterInterceptor will not go through all possible dimensions to pre allocate metrics.
+	// If you register interceptor very frequently (for example during tests) it can allocate huge amount of memory.
+	SkipPreallocate bool
+	Registerer      prometheus.Registerer
 }
 
 // NewInterceptor ...
@@ -94,8 +97,9 @@ func NewInterceptor(opts InterceptorOpts) *Interceptor {
 		registerer = prometheus.DefaultRegisterer
 	}
 	return &Interceptor{
-		monitoring: initMonitoring(registerer, opts.TrackPeers),
-		trackPeers: opts.TrackPeers,
+		monitoring:      initMonitoring(registerer, opts.TrackPeers),
+		trackPeers:      opts.TrackPeers,
+		skipPreallocate: opts.SkipPreallocate,
 	}
 }
 
