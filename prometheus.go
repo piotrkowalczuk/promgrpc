@@ -43,11 +43,15 @@ func RegisterInterceptor(s *grpc.Server, i *Interceptor) (err error) {
 				if _, err = i.monitoring.client.requestDuration.GetMetricWith(requestLabels); err != nil {
 					return err
 				}
-				if _, err = i.monitoring.client.messagesReceived.GetMetricWith(messageLabels); err != nil {
-					return err
+				if m.IsServerStream {
+					if _, err = i.monitoring.client.messagesReceived.GetMetricWith(messageLabels); err != nil {
+						return err
+					}
 				}
-				if _, err = i.monitoring.client.messagesSend.GetMetricWith(messageLabels); err != nil {
-					return err
+				if m.IsClientStream {
+					if _, err = i.monitoring.client.messagesSend.GetMetricWith(messageLabels); err != nil {
+						return err
+					}
 				}
 				// server
 				if _, err = i.monitoring.server.errors.GetMetricWith(requestLabels); err != nil {
@@ -59,11 +63,15 @@ func RegisterInterceptor(s *grpc.Server, i *Interceptor) (err error) {
 				if _, err = i.monitoring.server.requestDuration.GetMetricWith(requestLabels); err != nil {
 					return err
 				}
-				if _, err = i.monitoring.server.messagesReceived.GetMetricWith(messageLabels); err != nil {
-					return err
+				if m.IsClientStream {
+					if _, err = i.monitoring.server.messagesReceived.GetMetricWith(messageLabels); err != nil {
+						return err
+					}
 				}
-				if _, err = i.monitoring.server.messagesSend.GetMetricWith(messageLabels); err != nil {
-					return err
+				if m.IsServerStream {
+					if _, err = i.monitoring.server.messagesSend.GetMetricWith(messageLabels); err != nil {
+						return err
+					}
 				}
 			}
 		}
