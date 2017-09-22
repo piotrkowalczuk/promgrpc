@@ -9,6 +9,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/stats"
 )
 
 func ExampleInterceptor_Dialer() {
@@ -80,6 +81,16 @@ func TestInterceptor_StreamClient(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err.Error())
 	}
+}
+
+func TestInterceptor_HandleConn(t *testing.T) {
+	var handler stats.Handler
+	handler = promgrpc.NewInterceptor(promgrpc.InterceptorOpts{})
+
+	handler.HandleConn(context.Background(), &stats.ConnBegin{})
+	handler.HandleConn(context.Background(), &stats.ConnBegin{Client: true})
+	handler.HandleConn(context.Background(), &stats.ConnEnd{})
+	handler.HandleConn(context.Background(), &stats.ConnEnd{Client: true})
 }
 
 func TestRegisterInterceptor(t *testing.T) {

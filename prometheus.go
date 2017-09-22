@@ -10,6 +10,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/peer"
+	"google.golang.org/grpc/stats"
 )
 
 // RegisterInterceptor preallocates possible dimensions of every metric.
@@ -287,6 +288,38 @@ func (i *Interceptor) Collect(in chan<- prometheus.Metric) {
 	i.monitoring.client.errors.Collect(in)
 }
 
+// TagRPC implements stats Handler interface.
+func (i *Interceptor) TagRPC(ctx context.Context, info *stats.RPCTagInfo) context.Context {
+	return ctx
+}
+
+// HandleRPC implements stats Handler interface.
+func (i *Interceptor) HandleRPC(context.Context, stats.RPCStats) {
+}
+
+// TagConn implements stats Handler interface.
+func (i *Interceptor) TagConn(ctx context.Context, info *stats.ConnTagInfo) context.Context {
+	return ctx
+}
+
+// HandleConn implements stats Handler interface.
+func (i *Interceptor) HandleConn(ctx context.Context, info stats.ConnStats) {
+	switch in := info.(type) {
+	case *stats.ConnBegin:
+		if in.IsClient() {
+			i.monitoring.client.connections.Inc()
+		} else {
+			i.monitoring.server.connections.Inc()
+		}
+	case *stats.ConnEnd:
+		if in.IsClient() {
+			i.monitoring.client.connections.Dec()
+		} else {
+			i.monitoring.server.connections.Dec()
+		}
+	}
+}
+
 type monitoring struct {
 	dialer *prometheus.CounterVec
 	server *monitor
@@ -294,6 +327,7 @@ type monitoring struct {
 }
 
 type monitor struct {
+	connections      prometheus.Gauge
 	requests         *prometheus.CounterVec
 	requestDuration  *prometheus.SummaryVec
 	messagesReceived *prometheus.CounterVec
@@ -312,6 +346,14 @@ func initMonitoring(trackPeers bool) *monitoring {
 		[]string{"address"},
 	)
 
+	serverConnections := prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Namespace: "grpc",
+			Subsystem: "server",
+			Name:      "connections",
+			Help:      "Number of currently opened server side connections.",
+		},
+	)
 	serverRequests := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Namespace: "grpc",
@@ -358,6 +400,14 @@ func initMonitoring(trackPeers bool) *monitoring {
 		appendIf(trackPeers, []string{"service", "handler", "code", "type"}, "peer"),
 	)
 
+	clientConnections := prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Namespace: "grpc",
+			Subsystem: "client",
+			Name:      "connections",
+			Help:      "Number of currently opened client side connections.",
+		},
+	)
 	clientRequests := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Namespace: "grpc",
@@ -407,6 +457,7 @@ func initMonitoring(trackPeers bool) *monitoring {
 	return &monitoring{
 		dialer: dialer,
 		server: &monitor{
+			connections:      serverConnections,
 			requests:         serverRequests,
 			requestDuration:  serverRequestDuration,
 			messagesReceived: serverReceivedMessages,
@@ -414,6 +465,7 @@ func initMonitoring(trackPeers bool) *monitoring {
 			errors:           serverErrors,
 		},
 		client: &monitor{
+			connections:      clientConnections,
 			requests:         clientRequests,
 			requestDuration:  clientRequestDuration,
 			messagesReceived: clientReceivedMessages,
