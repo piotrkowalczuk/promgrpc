@@ -40,6 +40,7 @@ dop := []grpc.DialOption{
 }
 
 sop := []grpc.ServerOption{
+	grpc.StatsHandler(ict),
 	grpc.StreamInterceptor(ict.StreamServer()),
 	grpc.UnaryInterceptor(ict.UnaryServer()),
 }
