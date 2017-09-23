@@ -93,10 +93,49 @@ func TestInterceptor_HandleConn(t *testing.T) {
 	handler.HandleConn(context.Background(), &stats.ConnEnd{Client: true})
 }
 
+func TestInterceptor_HandleRPC(t *testing.T) {
+	var handler stats.Handler
+	handler = promgrpc.NewInterceptor(promgrpc.InterceptorOpts{})
+
+	handler.HandleRPC(context.Background(), &stats.Begin{})
+	handler.HandleRPC(context.Background(), &stats.Begin{Client: true})
+	handler.HandleRPC(context.Background(), &stats.End{})
+	handler.HandleRPC(context.Background(), &stats.End{Client: true})
+}
+
 func TestRegisterInterceptor(t *testing.T) {
+	ms := mockServer{
+		"test": grpc.ServiceInfo{
+			Methods: []grpc.MethodInfo{
+				{
+					Name: "regular",
+				},
+				{
+					Name:           "client-stream",
+					IsClientStream: true,
+				},
+				{
+					Name:           "server-stream",
+					IsServerStream: true,
+				},
+				{
+					Name:           "bidirectional-stream",
+					IsClientStream: true,
+					IsServerStream: true,
+				},
+			},
+		},
+	}
 	interceptor1 := promgrpc.NewInterceptor(promgrpc.InterceptorOpts{})
-	promgrpc.RegisterInterceptor(&grpc.Server{}, interceptor1)
+	promgrpc.RegisterInterceptor(ms, interceptor1)
 
 	interceptor2 := promgrpc.NewInterceptor(promgrpc.InterceptorOpts{TrackPeers: true})
-	promgrpc.RegisterInterceptor(&grpc.Server{}, interceptor2)
+	promgrpc.RegisterInterceptor(ms, interceptor2)
+}
+
+type mockServer map[string]grpc.ServiceInfo
+
+// GetServiceInfo implements ServiceInfoProvider interface.
+func (ms mockServer) GetServiceInfo() map[string]grpc.ServiceInfo {
+	return ms
 }

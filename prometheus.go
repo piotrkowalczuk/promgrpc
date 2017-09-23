@@ -13,10 +13,18 @@ import (
 	"google.golang.org/grpc/stats"
 )
 
+// ServiceInfoProvider is simple wrapper around GetServiceInfo method.
+// This interface is implemented by grpc Server.
+type ServiceInfoProvider interface {
+	// GetServiceInfo returns a map from service names to ServiceInfo.
+	// Service names include the package names, in the form of <package>.<service>.
+	GetServiceInfo() map[string]grpc.ServiceInfo
+}
+
 // RegisterInterceptor preallocates possible dimensions of every metric.
 // If peer tracking is enabled, nothing will happen.
 // If you register interceptor very frequently (for example during tests) it can allocate huge amount of memory.
-func RegisterInterceptor(s *grpc.Server, i *Interceptor) (err error) {
+func RegisterInterceptor(s ServiceInfoProvider, i *Interceptor) (err error) {
 	if i.trackPeers {
 		return nil
 	}
@@ -42,7 +50,7 @@ func RegisterInterceptor(s *grpc.Server, i *Interceptor) (err error) {
 				if _, err = i.monitoring.client.errors.GetMetricWith(requestLabels); err != nil {
 					return err
 				}
-				if _, err = i.monitoring.client.requests.GetMetricWith(requestLabels); err != nil {
+				if _, err = i.monitoring.client.requestsTotal.GetMetricWith(requestLabels); err != nil {
 					return err
 				}
 				if _, err = i.monitoring.client.requestDuration.GetMetricWith(requestLabels); err != nil {
@@ -62,7 +70,7 @@ func RegisterInterceptor(s *grpc.Server, i *Interceptor) (err error) {
 				if _, err = i.monitoring.server.errors.GetMetricWith(requestLabels); err != nil {
 					return err
 				}
-				if _, err = i.monitoring.server.requests.GetMetricWith(requestLabels); err != nil {
+				if _, err = i.monitoring.server.requestsTotal.GetMetricWith(requestLabels); err != nil {
 					return err
 				}
 				if _, err = i.monitoring.server.requestDuration.GetMetricWith(requestLabels); err != nil {
@@ -137,7 +145,7 @@ func (i *Interceptor) UnaryClient() grpc.UnaryClientInterceptor {
 
 		elapsed := float64(time.Since(start)) / float64(time.Microsecond)
 		monitor.requestDuration.With(labels).Observe(elapsed)
-		monitor.requests.With(labels).Add(1)
+		monitor.requestsTotal.With(labels).Add(1)
 
 		return err
 	}
@@ -165,7 +173,7 @@ func (i *Interceptor) StreamClient() grpc.StreamClientInterceptor {
 
 		elapsed := float64(time.Since(start)) / float64(time.Microsecond)
 		monitor.requestDuration.With(labels).Observe(elapsed)
-		monitor.requests.With(labels).Add(1)
+		monitor.requestsTotal.With(labels).Add(1)
 
 		return &monitoredClientStream{ClientStream: client, monitor: monitor, labels: prometheus.Labels{
 			"service": service,
@@ -200,7 +208,7 @@ func (i *Interceptor) UnaryServer() grpc.UnaryServerInterceptor {
 
 		elapsed := float64(time.Since(start)) / float64(time.Microsecond)
 		monitor.requestDuration.With(labels).Observe(elapsed)
-		monitor.requests.With(labels).Add(1)
+		monitor.requestsTotal.With(labels).Add(1)
 
 		return res, err
 	}
@@ -248,7 +256,7 @@ func (i *Interceptor) StreamServer() grpc.StreamServerInterceptor {
 
 		elapsed := float64(time.Since(start)) / float64(time.Microsecond)
 		monitor.requestDuration.With(labels).Observe(elapsed)
-		monitor.requests.With(labels).Add(1)
+		monitor.requestsTotal.With(labels).Add(1)
 
 		return err
 	}
@@ -257,35 +265,15 @@ func (i *Interceptor) StreamServer() grpc.StreamServerInterceptor {
 // Describe implements prometheus Collector interface.
 func (i *Interceptor) Describe(in chan<- *prometheus.Desc) {
 	i.monitoring.dialer.Describe(in)
-
-	i.monitoring.server.requests.Describe(in)
-	i.monitoring.server.requestDuration.Describe(in)
-	i.monitoring.server.messagesReceived.Describe(in)
-	i.monitoring.server.messagesSend.Describe(in)
-	i.monitoring.server.errors.Describe(in)
-
-	i.monitoring.client.requests.Describe(in)
-	i.monitoring.client.requestDuration.Describe(in)
-	i.monitoring.client.messagesReceived.Describe(in)
-	i.monitoring.client.messagesSend.Describe(in)
-	i.monitoring.client.errors.Describe(in)
+	i.monitoring.server.Describe(in)
+	i.monitoring.client.Describe(in)
 }
 
 // Collect implements prometheus Collector interface.
 func (i *Interceptor) Collect(in chan<- prometheus.Metric) {
 	i.monitoring.dialer.Collect(in)
-
-	i.monitoring.server.requests.Collect(in)
-	i.monitoring.server.requestDuration.Collect(in)
-	i.monitoring.server.messagesReceived.Collect(in)
-	i.monitoring.server.messagesSend.Collect(in)
-	i.monitoring.server.errors.Collect(in)
-
-	i.monitoring.client.requests.Collect(in)
-	i.monitoring.client.requestDuration.Collect(in)
-	i.monitoring.client.messagesReceived.Collect(in)
-	i.monitoring.client.messagesSend.Collect(in)
-	i.monitoring.client.errors.Collect(in)
+	i.monitoring.server.Collect(in)
+	i.monitoring.client.Collect(in)
 }
 
 // TagRPC implements stats Handler interface.
@@ -294,7 +282,21 @@ func (i *Interceptor) TagRPC(ctx context.Context, info *stats.RPCTagInfo) contex
 }
 
 // HandleRPC implements stats Handler interface.
-func (i *Interceptor) HandleRPC(context.Context, stats.RPCStats) {
+func (i *Interceptor) HandleRPC(ctx context.Context, info stats.RPCStats) {
+	switch in := info.(type) {
+	case *stats.Begin:
+		if in.IsClient() {
+			i.monitoring.client.requests.Inc()
+		} else {
+			i.monitoring.server.requests.Inc()
+		}
+	case *stats.End:
+		if in.IsClient() {
+			i.monitoring.client.requests.Dec()
+		} else {
+			i.monitoring.server.requests.Dec()
+		}
+	}
 }
 
 // TagConn implements stats Handler interface.
@@ -328,11 +330,49 @@ type monitoring struct {
 
 type monitor struct {
 	connections      prometheus.Gauge
-	requests         *prometheus.CounterVec
+	requests         prometheus.Gauge
+	requestsTotal    *prometheus.CounterVec
 	requestDuration  *prometheus.SummaryVec
 	messagesReceived *prometheus.CounterVec
 	messagesSend     *prometheus.CounterVec
 	errors           *prometheus.CounterVec
+}
+
+// Describe implements prometheus Collector interface.
+func (m *monitor) Describe(in chan<- *prometheus.Desc) {
+	// Gauge
+	m.connections.Describe(in)
+	m.requests.Describe(in)
+
+	// SummaryVec
+	m.requestDuration.Describe(in)
+
+	// CounterVec
+	m.requestsTotal.Describe(in)
+	m.messagesReceived.Describe(in)
+	m.messagesSend.Describe(in)
+	m.errors.Describe(in)
+}
+
+// Collect implements prometheus Collector interface.
+func (m *monitor) Collect(in chan<- prometheus.Metric) {
+	// Gauge
+	m.connections.Collect(in)
+	m.requests.Collect(in)
+
+	// SummaryVec
+	m.requestDuration.Collect(in)
+
+	// CounterVec
+	m.requestsTotal.Collect(in)
+	m.messagesReceived.Collect(in)
+	m.messagesSend.Collect(in)
+	m.errors.Collect(in)
+
+	m.requestsTotal.Reset()
+	m.messagesReceived.Reset()
+	m.messagesSend.Reset()
+	m.errors.Reset()
 }
 
 func initMonitoring(trackPeers bool) *monitoring {
@@ -354,7 +394,15 @@ func initMonitoring(trackPeers bool) *monitoring {
 			Help:      "Number of currently opened server side connections.",
 		},
 	)
-	serverRequests := prometheus.NewCounterVec(
+	serverRequests := prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Namespace: "grpc",
+			Subsystem: "server",
+			Name:      "requests",
+			Help:      "Number of currently processed server side rpc requests.",
+		},
+	)
+	serverRequestsTotal := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Namespace: "grpc",
 			Subsystem: "server",
@@ -408,7 +456,15 @@ func initMonitoring(trackPeers bool) *monitoring {
 			Help:      "Number of currently opened client side connections.",
 		},
 	)
-	clientRequests := prometheus.NewCounterVec(
+	clientRequests := prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Namespace: "grpc",
+			Subsystem: "client",
+			Name:      "requests",
+			Help:      "Number of currently processed client side rpc requests.",
+		},
+	)
+	clientRequestsTotal := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Namespace: "grpc",
 			Subsystem: "client",
@@ -459,6 +515,7 @@ func initMonitoring(trackPeers bool) *monitoring {
 		server: &monitor{
 			connections:      serverConnections,
 			requests:         serverRequests,
+			requestsTotal:    serverRequestsTotal,
 			requestDuration:  serverRequestDuration,
 			messagesReceived: serverReceivedMessages,
 			messagesSend:     serverSendMessages,
@@ -467,6 +524,7 @@ func initMonitoring(trackPeers bool) *monitoring {
 		client: &monitor{
 			connections:      clientConnections,
 			requests:         clientRequests,
+			requestsTotal:    clientRequestsTotal,
 			requestDuration:  clientRequestDuration,
 			messagesReceived: clientReceivedMessages,
 			messagesSend:     clientSendMessages,
