@@ -2,6 +2,7 @@ package promgrpc
 
 import (
 	"net"
+	"strconv"
 	"strings"
 	"time"
 
@@ -276,48 +277,65 @@ func (i *Interceptor) Collect(in chan<- prometheus.Metric) {
 	i.monitoring.client.Collect(in)
 }
 
+type ctxKey int
+
+var (
+	tagRPCKey  ctxKey = 1
+	tagConnKey ctxKey = 2
+)
+
 // TagRPC implements stats Handler interface.
 func (i *Interceptor) TagRPC(ctx context.Context, info *stats.RPCTagInfo) context.Context {
-	return ctx
+	return context.WithValue(ctx, tagRPCKey, prometheus.Labels{
+		"fail_fast": strconv.FormatBool(info.FailFast),
+		"handler":   info.FullMethodName,
+	})
 }
 
 // HandleRPC implements stats Handler interface.
-func (i *Interceptor) HandleRPC(ctx context.Context, info stats.RPCStats) {
-	switch in := info.(type) {
+func (i *Interceptor) HandleRPC(ctx context.Context, stat stats.RPCStats) {
+	lab, _ := ctx.Value(tagRPCKey).(prometheus.Labels)
+
+	switch in := stat.(type) {
 	case *stats.Begin:
 		if in.IsClient() {
-			i.monitoring.client.requests.Inc()
+			i.monitoring.client.requests.With(lab).Inc()
 		} else {
-			i.monitoring.server.requests.Inc()
+			i.monitoring.server.requests.With(lab).Inc()
 		}
 	case *stats.End:
 		if in.IsClient() {
-			i.monitoring.client.requests.Dec()
+			i.monitoring.client.requests.With(lab).Dec()
 		} else {
-			i.monitoring.server.requests.Dec()
+			i.monitoring.server.requests.With(lab).Dec()
 		}
 	}
 }
 
 // TagConn implements stats Handler interface.
 func (i *Interceptor) TagConn(ctx context.Context, info *stats.ConnTagInfo) context.Context {
-	return ctx
+	return context.WithValue(ctx, tagConnKey, prometheus.Labels{
+		"remote_addr": info.LocalAddr.String(),
+		"local_addr":  info.LocalAddr.String(),
+	})
 }
 
 // HandleConn implements stats Handler interface.
-func (i *Interceptor) HandleConn(ctx context.Context, info stats.ConnStats) {
-	switch in := info.(type) {
+func (i *Interceptor) HandleConn(ctx context.Context, stat stats.ConnStats) {
+	lab, _ := ctx.Value(tagConnKey).(prometheus.Labels)
+
+	switch in := stat.(type) {
 	case *stats.ConnBegin:
 		if in.IsClient() {
-			i.monitoring.client.connections.Inc()
+			i.monitoring.client.connections.With(lab).Inc()
 		} else {
-			i.monitoring.server.connections.Inc()
+			i.monitoring.server.connections.With(lab).Inc()
 		}
 	case *stats.ConnEnd:
 		if in.IsClient() {
-			i.monitoring.client.connections.Dec()
+			i.monitoring.client.connections.With(lab).Dec()
 		} else {
-			i.monitoring.server.connections.Dec()
+			i.monitoring.server.connections.With(lab).Dec()
 		}
 	}
 }
@@ -329,8 +347,8 @@ type monitoring struct {
 }
 
 type monitor struct {
-	connections      prometheus.Gauge
-	requests         prometheus.Gauge
+	connections      *prometheus.GaugeVec
+	requests         *prometheus.GaugeVec
 	requestsTotal    *prometheus.CounterVec
 	requestDuration  *prometheus.SummaryVec
 	messagesReceived *prometheus.CounterVec
@@ -386,21 +404,23 @@ func initMonitoring(trackPeers bool) *monitoring {
 		[]string{"address"},
 	)
 
-	serverConnections := prometheus.NewGauge(
+	serverConnections := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Namespace: "grpc",
 			Subsystem: "server",
 			Name:      "connections",
 			Help:      "Number of currently opened server side connections.",
 		},
+		[]string{"remote_addr", "local_addr"},
 	)
-	serverRequests := prometheus.NewGauge(
+	serverRequests := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Namespace: "grpc",
 			Subsystem: "server",
 			Name:      "requests",
 			Help:      "Number of currently processed server side rpc requests.",
 		},
+		[]string{"fail_fast", "handler"},
 	)
 	serverRequestsTotal := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
@@ -448,21 +468,23 @@ func initMonitoring(trackPeers bool) *monitoring {
 		appendIf(trackPeers, []string{"service", "handler", "code", "type"}, "peer"),
 	)
 
-	clientConnections := prometheus.NewGauge(
+	clientConnections := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Namespace: "grpc",
 			Subsystem: "client",
 			Name:      "connections",
 			Help:      "Number of currently opened client side connections.",
 		},
+		[]string{"remote_addr", "local_addr"},
 	)
-	clientRequests := prometheus.NewGauge(
+	clientRequests := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Namespace: "grpc",
 			Subsystem: "client",
 			Name:      "requests",
 			Help:      "Number of currently processed client side rpc requests.",
 		},
+		[]string{"fail_fast", "handler"},
 	)
 	clientRequestsTotal := prometheus.NewCounterVec(
 		prometheus.CounterOpts{

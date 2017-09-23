@@ -87,20 +87,29 @@ func TestInterceptor_HandleConn(t *testing.T) {
 	var handler stats.Handler
 	handler = promgrpc.NewInterceptor(promgrpc.InterceptorOpts{})
 
-	handler.HandleConn(context.Background(), &stats.ConnBegin{})
-	handler.HandleConn(context.Background(), &stats.ConnBegin{Client: true})
-	handler.HandleConn(context.Background(), &stats.ConnEnd{})
-	handler.HandleConn(context.Background(), &stats.ConnEnd{Client: true})
+	ctx := handler.TagConn(context.Background(), &stats.ConnTagInfo{
+		LocalAddr:  &net.TCPAddr{},
+		RemoteAddr: &net.TCPAddr{},
+	})
+
+	handler.HandleConn(ctx, &stats.ConnBegin{})
+	handler.HandleConn(ctx, &stats.ConnBegin{Client: true})
+	handler.HandleConn(ctx, &stats.ConnEnd{})
+	handler.HandleConn(ctx, &stats.ConnEnd{Client: true})
 }
 
 func TestInterceptor_HandleRPC(t *testing.T) {
 	var handler stats.Handler
 	handler = promgrpc.NewInterceptor(promgrpc.InterceptorOpts{})
 
-	handler.HandleRPC(context.Background(), &stats.Begin{})
-	handler.HandleRPC(context.Background(), &stats.Begin{Client: true})
-	handler.HandleRPC(context.Background(), &stats.End{})
-	handler.HandleRPC(context.Background(), &stats.End{Client: true})
+	ctx := handler.TagRPC(context.Background(), &stats.RPCTagInfo{
+		FullMethodName: "method",
+		FailFast:       true,
+	})
+	handler.HandleRPC(ctx, &stats.Begin{})
+	handler.HandleRPC(ctx, &stats.Begin{Client: true})
+	handler.HandleRPC(ctx, &stats.End{})
+	handler.HandleRPC(ctx, &stats.End{Client: true})
 }
 
 func TestRegisterInterceptor(t *testing.T) {
