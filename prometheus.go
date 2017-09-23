@@ -315,7 +315,7 @@ func (i *Interceptor) HandleRPC(ctx context.Context, stat stats.RPCStats) {
 // TagConn implements stats Handler interface.
 func (i *Interceptor) TagConn(ctx context.Context, info *stats.ConnTagInfo) context.Context {
 	return context.WithValue(ctx, tagConnKey, prometheus.Labels{
-		"remote_addr": info.LocalAddr.String(),
+		"remote_addr": info.RemoteAddr.String(),
 		"local_addr":  info.LocalAddr.String(),
 	})
 }
