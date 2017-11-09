@@ -144,8 +144,7 @@ func (i *Interceptor) UnaryClient() grpc.UnaryClientInterceptor {
 			monitor.errors.With(labels).Add(1)
 		}
 
-		elapsed := float64(time.Since(start)) / float64(time.Microsecond)
-		monitor.requestDuration.With(labels).Observe(elapsed)
+		monitor.requestDuration.With(labels).Observe(time.Since(start).Seconds())
 		monitor.requestsTotal.With(labels).Add(1)
 
 		return err
@@ -172,8 +171,7 @@ func (i *Interceptor) StreamClient() grpc.StreamClientInterceptor {
 			monitor.errors.With(labels).Add(1)
 		}
 
-		elapsed := float64(time.Since(start)) / float64(time.Microsecond)
-		monitor.requestDuration.With(labels).Observe(elapsed)
+		monitor.requestDuration.With(labels).Observe(time.Since(start).Seconds())
 		monitor.requestsTotal.With(labels).Add(1)
 
 		return &monitoredClientStream{ClientStream: client, monitor: monitor, labels: prometheus.Labels{
@@ -207,8 +205,7 @@ func (i *Interceptor) UnaryServer() grpc.UnaryServerInterceptor {
 			monitor.errors.With(labels).Add(1)
 		}
 
-		elapsed := float64(time.Since(start)) / float64(time.Microsecond)
-		monitor.requestDuration.With(labels).Observe(elapsed)
+		monitor.requestDuration.With(labels).Observe(time.Since(start).Seconds())
 		monitor.requestsTotal.With(labels).Add(1)
 
 		return res, err
@@ -255,8 +252,7 @@ func (i *Interceptor) StreamServer() grpc.StreamServerInterceptor {
 			monitor.errors.With(labels).Add(1)
 		}
 
-		elapsed := float64(time.Since(start)) / float64(time.Microsecond)
-		monitor.requestDuration.With(labels).Observe(elapsed)
+		monitor.requestDuration.With(labels).Observe(time.Since(start).Seconds())
 		monitor.requestsTotal.With(labels).Add(1)
 
 		return err
@@ -286,9 +282,12 @@ var (
 
 // TagRPC implements stats Handler interface.
 func (i *Interceptor) TagRPC(ctx context.Context, info *stats.RPCTagInfo) context.Context {
+	service, method := split(info.FullMethodName)
+
 	return context.WithValue(ctx, tagRPCKey, prometheus.Labels{
 		"fail_fast": strconv.FormatBool(info.FailFast),
-		"handler":   info.FullMethodName,
+		"service":   service,
+		"handler":   method,
 	})
 }
 
@@ -350,7 +349,7 @@ type monitor struct {
 	connections      *prometheus.GaugeVec
 	requests         *prometheus.GaugeVec
 	requestsTotal    *prometheus.CounterVec
-	requestDuration  *prometheus.SummaryVec
+	requestDuration  *prometheus.HistogramVec
 	messagesReceived *prometheus.CounterVec
 	messagesSend     *prometheus.CounterVec
 	errors           *prometheus.CounterVec
@@ -362,7 +361,7 @@ func (m *monitor) Describe(in chan<- *prometheus.Desc) {
 	m.connections.Describe(in)
 	m.requests.Describe(in)
 
-	// SummaryVec
+	// HistogramVec
 	m.requestDuration.Describe(in)
 
 	// CounterVec
@@ -378,7 +377,7 @@ func (m *monitor) Collect(in chan<- prometheus.Metric) {
 	m.connections.Collect(in)
 	m.requests.Collect(in)
 
-	// SummaryVec
+	// HistogramVec
 	m.requestDuration.Collect(in)
 
 	// CounterVec
@@ -386,11 +385,6 @@ func (m *monitor) Collect(in chan<- prometheus.Metric) {
 	m.messagesReceived.Collect(in)
 	m.messagesSend.Collect(in)
 	m.errors.Collect(in)
-
-	m.requestsTotal.Reset()
-	m.messagesReceived.Reset()
-	m.messagesSend.Reset()
-	m.errors.Reset()
 }
 
 func initMonitoring(trackPeers bool) *monitoring {
@@ -420,7 +414,7 @@ func initMonitoring(trackPeers bool) *monitoring {
 			Name:      "requests",
 			Help:      "Number of currently processed server side rpc requests.",
 		},
-		[]string{"fail_fast", "handler"},
+		[]string{"fail_fast", "handler", "service"},
 	)
 	serverRequestsTotal := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
@@ -449,12 +443,12 @@ func initMonitoring(trackPeers bool) *monitoring {
 		},
 		appendIf(trackPeers, []string{"service", "handler"}, "peer"),
 	)
-	serverRequestDuration := prometheus.NewSummaryVec(
-		prometheus.SummaryOpts{
+	serverRequestDuration := prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
 			Namespace: "grpc",
 			Subsystem: "server",
-			Name:      "request_duration_microseconds",
-			Help:      "The RPC request latencies in microseconds on server side.",
+			Name:      "request_duration_seconds",
+			Help:      "The RPC request latencies in seconds on server side.",
 		},
 		appendIf(trackPeers, []string{"service", "handler", "code", "type"}, "peer"),
 	)
@@ -484,7 +478,7 @@ func initMonitoring(trackPeers bool) *monitoring {
 			Name:      "requests",
 			Help:      "Number of currently processed client side rpc requests.",
 		},
-		[]string{"fail_fast", "handler"},
+		[]string{"fail_fast", "handler", "service"},
 	)
 	clientRequestsTotal := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
@@ -513,12 +507,12 @@ func initMonitoring(trackPeers bool) *monitoring {
 		},
 		[]string{"service", "handler"},
 	)
-	clientRequestDuration := prometheus.NewSummaryVec(
-		prometheus.SummaryOpts{
+	clientRequestDuration := prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
 			Namespace: "grpc",
 			Subsystem: "client",
-			Name:      "request_duration_microseconds",
-			Help:      "The RPC request latencies in microseconds.",
+			Name:      "request_duration_seconds",
+			Help:      "The RPC request latencies in seconds on client side.",
 		},
 		[]string{"service", "handler", "code", "type"},
 	)
@@ -527,7 +521,7 @@ func initMonitoring(trackPeers bool) *monitoring {
 			Namespace: "grpc",
 			Subsystem: "client",
 			Name:      "errors_total",
-			Help:      "Total number of errors that happen during RPC calles.",
+			Help:      "Total number of errors that happen during RPC calls.",
 		},
 		[]string{"service", "handler", "code", "type"},
 	)
