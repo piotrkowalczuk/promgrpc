@@ -47,26 +47,6 @@ func RegisterInterceptor(s ServiceInfoProvider, i *Interceptor) (err error) {
 					"handler": m.Name,
 				}
 
-				// client
-				if _, err = i.monitoring.client.errors.GetMetricWith(requestLabels); err != nil {
-					return err
-				}
-				if _, err = i.monitoring.client.requestsTotal.GetMetricWith(requestLabels); err != nil {
-					return err
-				}
-				if _, err = i.monitoring.client.requestDuration.GetMetricWith(requestLabels); err != nil {
-					return err
-				}
-				if m.IsServerStream {
-					if _, err = i.monitoring.client.messagesReceived.GetMetricWith(messageLabels); err != nil {
-						return err
-					}
-				}
-				if m.IsClientStream {
-					if _, err = i.monitoring.client.messagesSend.GetMetricWith(messageLabels); err != nil {
-						return err
-					}
-				}
 				// server
 				if _, err = i.monitoring.server.errors.GetMetricWith(requestLabels); err != nil {
 					return err
