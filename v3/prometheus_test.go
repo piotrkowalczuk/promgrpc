@@ -21,10 +21,17 @@ func ExampleInterceptor_Dialer() {
 	})))
 }
 
-func TestIntercepror_Collector(t *testing.T) {
-	interceptor := promgrpc.NewInterceptor(promgrpc.InterceptorOpts{})
+func TestInterceptor_Collector(t *testing.T) {
+	interceptor1 := promgrpc.NewInterceptor(promgrpc.InterceptorOpts{ConstLabels: prometheus.Labels{"foo": "bar"}})
+	interceptor2 := promgrpc.NewInterceptor(promgrpc.InterceptorOpts{ConstLabels: prometheus.Labels{"foo": "xyz"}})
+
 	req := prometheus.NewRegistry()
-	req.Register(interceptor)
+	if err := req.Register(interceptor1); err != nil {
+		t.Fatal(err)
+	}
+	if err := req.Register(interceptor2); err != nil {
+		t.Fatal(err)
+	}
 
 	_, err := req.Gather()
 	if err != nil {

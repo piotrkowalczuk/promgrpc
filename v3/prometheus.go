@@ -86,12 +86,16 @@ type InterceptorOpts struct {
 	// peer is not bounded dimension so it can cause performance loss.
 	// If its turn on Interceptor will not init metrics on startup.
 	TrackPeers bool
+	// ConstLabels will be passed to each collector.
+	// Thanks to that it is possible to register multiple Interceptors.
+	// They just have to have different constant labels.
+	ConstLabels prometheus.Labels
 }
 
 // NewInterceptor implements both prometheus Collector interface and methods required by grpc Interceptor.
 func NewInterceptor(opts InterceptorOpts) *Interceptor {
 	return &Interceptor{
-		monitoring: initMonitoring(opts.TrackPeers),
+		monitoring: initMonitoring(opts.TrackPeers, opts.ConstLabels),
 		trackPeers: opts.TrackPeers,
 	}
 }
@@ -367,141 +371,156 @@ func (m *monitor) Collect(in chan<- prometheus.Metric) {
 	m.errors.Collect(in)
 }
 
-func initMonitoring(trackPeers bool) *monitoring {
+func initMonitoring(trackPeers bool, constLabels prometheus.Labels) *monitoring {
 	dialer := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Namespace: "grpc",
-			Subsystem: "client",
-			Name:      "reconnects_total",
-			Help:      "Total number of reconnects made by client.",
+			Namespace:   "grpc",
+			Subsystem:   "client",
+			Name:        "reconnects_total",
+			Help:        "Total number of reconnects made by client.",
+			ConstLabels: constLabels,
 		},
 		[]string{"address"},
 	)
 
 	serverConnections := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Namespace: "grpc",
-			Subsystem: "server",
-			Name:      "connections",
-			Help:      "Number of currently opened server side connections.",
+			Namespace:   "grpc",
+			Subsystem:   "server",
+			Name:        "connections",
+			Help:        "Number of currently opened server side connections.",
+			ConstLabels: constLabels,
 		},
 		[]string{"remote_addr", "local_addr"},
 	)
 	serverRequests := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Namespace: "grpc",
-			Subsystem: "server",
-			Name:      "requests",
-			Help:      "Number of currently processed server side rpc requests.",
+			Namespace:   "grpc",
+			Subsystem:   "server",
+			Name:        "requests",
+			Help:        "Number of currently processed server side rpc requests.",
+			ConstLabels: constLabels,
 		},
 		[]string{"fail_fast", "handler", "service"},
 	)
 	serverRequestsTotal := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Namespace: "grpc",
-			Subsystem: "server",
-			Name:      "requests_total",
-			Help:      "Total number of RPC requests received by server.",
+			Namespace:   "grpc",
+			Subsystem:   "server",
+			Name:        "requests_total",
+			Help:        "Total number of RPC requests received by server.",
+			ConstLabels: constLabels,
 		},
 		appendIf(trackPeers, []string{"service", "handler", "code", "type"}, "peer"),
 	)
 	serverReceivedMessages := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Namespace: "grpc",
-			Subsystem: "server",
-			Name:      "received_messages_total",
-			Help:      "Total number of RPC messages received by server.",
+			Namespace:   "grpc",
+			Subsystem:   "server",
+			Name:        "received_messages_total",
+			Help:        "Total number of RPC messages received by server.",
+			ConstLabels: constLabels,
 		},
 		appendIf(trackPeers, []string{"service", "handler"}, "peer"),
 	)
 	serverSendMessages := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Namespace: "grpc",
-			Subsystem: "server",
-			Name:      "send_messages_total",
-			Help:      "Total number of RPC messages send by server.",
+			Namespace:   "grpc",
+			Subsystem:   "server",
+			Name:        "send_messages_total",
+			Help:        "Total number of RPC messages send by server.",
+			ConstLabels: constLabels,
 		},
 		appendIf(trackPeers, []string{"service", "handler"}, "peer"),
 	)
 	serverRequestDuration := prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Namespace: "grpc",
-			Subsystem: "server",
-			Name:      "request_duration_seconds",
-			Help:      "The RPC request latencies in seconds on server side.",
+			Namespace:   "grpc",
+			Subsystem:   "server",
+			Name:        "request_duration_seconds",
+			Help:        "The RPC request latencies in seconds on server side.",
+			ConstLabels: constLabels,
 		},
 		appendIf(trackPeers, []string{"service", "handler", "code", "type"}, "peer"),
 	)
 	serverErrors := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Namespace: "grpc",
-			Subsystem: "server",
-			Name:      "errors_total",
-			Help:      "Total number of errors that happen during RPC calles on server side.",
+			Namespace:   "grpc",
+			Subsystem:   "server",
+			Name:        "errors_total",
+			Help:        "Total number of errors that happen during RPC calles on server side.",
+			ConstLabels: constLabels,
 		},
 		appendIf(trackPeers, []string{"service", "handler", "code", "type"}, "peer"),
 	)
 
 	clientConnections := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Namespace: "grpc",
-			Subsystem: "client",
-			Name:      "connections",
-			Help:      "Number of currently opened client side connections.",
+			Namespace:   "grpc",
+			Subsystem:   "client",
+			Name:        "connections",
+			Help:        "Number of currently opened client side connections.",
+			ConstLabels: constLabels,
 		},
 		[]string{"remote_addr", "local_addr"},
 	)
 	clientRequests := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Namespace: "grpc",
-			Subsystem: "client",
-			Name:      "requests",
-			Help:      "Number of currently processed client side rpc requests.",
+			Namespace:   "grpc",
+			Subsystem:   "client",
+			Name:        "requests",
+			Help:        "Number of currently processed client side rpc requests.",
+			ConstLabels: constLabels,
 		},
 		[]string{"fail_fast", "handler", "service"},
 	)
 	clientRequestsTotal := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Namespace: "grpc",
-			Subsystem: "client",
-			Name:      "requests_total",
-			Help:      "Total number of RPC requests made by client.",
+			Namespace:   "grpc",
+			Subsystem:   "client",
+			Name:        "requests_total",
+			Help:        "Total number of RPC requests made by client.",
+			ConstLabels: constLabels,
 		},
 		[]string{"service", "handler", "code", "type"},
 	)
 	clientReceivedMessages := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Namespace: "grpc",
-			Subsystem: "client",
-			Name:      "received_messages_total",
-			Help:      "Total number of RPC messages received.",
+			Namespace:   "grpc",
+			Subsystem:   "client",
+			Name:        "received_messages_total",
+			Help:        "Total number of RPC messages received.",
+			ConstLabels: constLabels,
 		},
 		[]string{"service", "handler"},
 	)
 	clientSendMessages := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Namespace: "grpc",
-			Subsystem: "client",
-			Name:      "send_messages_total",
-			Help:      "Total number of RPC messages send.",
+			Namespace:   "grpc",
+			Subsystem:   "client",
+			Name:        "send_messages_total",
+			Help:        "Total number of RPC messages send.",
+			ConstLabels: constLabels,
 		},
 		[]string{"service", "handler"},
 	)
 	clientRequestDuration := prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Namespace: "grpc",
-			Subsystem: "client",
-			Name:      "request_duration_seconds",
-			Help:      "The RPC request latencies in seconds on client side.",
+			Namespace:   "grpc",
+			Subsystem:   "client",
+			Name:        "request_duration_seconds",
+			Help:        "The RPC request latencies in seconds on client side.",
+			ConstLabels: constLabels,
 		},
 		[]string{"service", "handler", "code", "type"},
 	)
 	clientErrors := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Namespace: "grpc",
-			Subsystem: "client",
-			Name:      "errors_total",
-			Help:      "Total number of errors that happen during RPC calls.",
+			Namespace:   "grpc",
+			Subsystem:   "client",
+			Name:        "errors_total",
+			Help:        "Total number of errors that happen during RPC calls.",
+			ConstLabels: constLabels,
 		},
 		[]string{"service", "handler", "code", "type"},
 	)
