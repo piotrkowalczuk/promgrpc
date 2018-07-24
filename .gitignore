@@ -1,6 +1,7 @@
 .idea
-*.iml
 vendor
 glide.lock
+*.iml
 *.out
 *.log
+*.sum
