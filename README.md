@@ -34,6 +34,10 @@ Library allows to monitor gRPC based client and server applications.
 ## Example
 
 ```go
+import "github.com/piotrkowalczuk/promgrpc/v3"
+
+// ...
+
 ict := promgrpc.NewInterceptor(promgrpc.InterceptorOpts{})
 dop := []grpc.DialOption{
 	grpc.WithDialer(ict.Dialer(func(addr string, timeout time.Duration) (net.Conn, error) {
