@@ -10,9 +10,12 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/stats"
 )
+
+const userAgentLabel = "user_agent"
 
 // ServiceInfoProvider is simple wrapper around GetServiceInfo method.
 // This interface is implemented by grpc Server.
@@ -37,10 +40,11 @@ func RegisterInterceptor(s ServiceInfoProvider, i *Interceptor) (err error) {
 
 			for c := uint32(0); c <= 15; c++ {
 				requestLabels := prometheus.Labels{
-					"service": sn,
-					"handler": m.Name,
-					"code":    codes.Code(c).String(),
-					"type":    t,
+					"service":      sn,
+					"handler":      m.Name,
+					"code":         codes.Code(c).String(),
+					"type":         t,
+					userAgentLabel: userAgent(context.TODO()),
 				}
 				messageLabels := prometheus.Labels{
 					"service": sn,
@@ -177,10 +181,11 @@ func (i *Interceptor) UnaryServer() grpc.UnaryServerInterceptor {
 		service, method := split(info.FullMethod)
 
 		labels := prometheus.Labels{
-			"service": service,
-			"handler": method,
-			"code":    code.String(),
-			"type":    "unary",
+			"service":      service,
+			"handler":      method,
+			"code":         code.String(),
+			"type":         "unary",
+			userAgentLabel: userAgent(ctx),
 		}
 		if i.trackPeers {
 			labels["peer"] = peerValue(ctx)
@@ -202,11 +207,13 @@ func (i *Interceptor) StreamServer() grpc.StreamServerInterceptor {
 
 	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		start := time.Now()
-
 		service, method := split(info.FullMethod)
+		ua := userAgent(ss.Context())
+
 		streamLabels := prometheus.Labels{
-			"service": service,
-			"handler": method,
+			"service":      service,
+			"handler":      method,
+			userAgentLabel: ua,
 		}
 		if i.trackPeers {
 			if ss != nil {
@@ -219,10 +226,11 @@ func (i *Interceptor) StreamServer() grpc.StreamServerInterceptor {
 		err := handler(srv, &monitoredServerStream{ServerStream: ss, labels: streamLabels, monitor: monitor})
 		code := grpc.Code(err)
 		labels := prometheus.Labels{
-			"service": service,
-			"handler": method,
-			"code":    code.String(),
-			"type":    handlerType(info.IsClientStream, info.IsServerStream),
+			"service":      service,
+			"handler":      method,
+			"code":         code.String(),
+			"type":         handlerType(info.IsClientStream, info.IsServerStream),
+			userAgentLabel: ua,
 		}
 		if i.trackPeers {
 			if ss != nil {
@@ -284,13 +292,13 @@ func (i *Interceptor) HandleRPC(ctx context.Context, stat stats.RPCStats) {
 		if in.IsClient() {
 			i.monitoring.client.requests.With(lab).Inc()
 		} else {
-			i.monitoring.server.requests.With(lab).Inc()
+			i.monitoring.server.requests.With(withUserAgentLabel(ctx, lab)).Inc()
 		}
 	case *stats.End:
 		if in.IsClient() {
 			i.monitoring.client.requests.With(lab).Dec()
 		} else {
-			i.monitoring.server.requests.With(lab).Dec()
+			i.monitoring.server.requests.With(withUserAgentLabel(ctx, lab)).Dec()
 		}
 	}
 }
@@ -312,13 +320,13 @@ func (i *Interceptor) HandleConn(ctx context.Context, stat stats.ConnStats) {
 		if in.IsClient() {
 			i.monitoring.client.connections.With(lab).Inc()
 		} else {
-			i.monitoring.server.connections.With(lab).Inc()
+			i.monitoring.server.connections.With(withUserAgentLabel(ctx, lab)).Inc()
 		}
 	case *stats.ConnEnd:
 		if in.IsClient() {
 			i.monitoring.client.connections.With(lab).Dec()
 		} else {
-			i.monitoring.server.connections.With(lab).Dec()
+			i.monitoring.server.connections.With(withUserAgentLabel(ctx, lab)).Dec()
 		}
 	}
 }
@@ -391,7 +399,7 @@ func initMonitoring(trackPeers bool, constLabels prometheus.Labels) *monitoring 
 			Help:        "Number of currently opened server side connections.",
 			ConstLabels: constLabels,
 		},
-		[]string{"remote_addr", "local_addr"},
+		[]string{"remote_addr", "local_addr", userAgentLabel},
 	)
 	serverRequests := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
@@ -401,7 +409,7 @@ func initMonitoring(trackPeers bool, constLabels prometheus.Labels) *monitoring 
 			Help:        "Number of currently processed server side rpc requests.",
 			ConstLabels: constLabels,
 		},
-		[]string{"fail_fast", "handler", "service"},
+		[]string{"fail_fast", "handler", "service", userAgentLabel},
 	)
 	serverRequestsTotal := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
@@ -411,7 +419,7 @@ func initMonitoring(trackPeers bool, constLabels prometheus.Labels) *monitoring 
 			Help:        "Total number of RPC requests received by server.",
 			ConstLabels: constLabels,
 		},
-		appendIf(trackPeers, []string{"service", "handler", "code", "type"}, "peer"),
+		appendIf(trackPeers, []string{"service", "handler", "code", "type", userAgentLabel}, "peer"),
 	)
 	serverReceivedMessages := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
@@ -421,7 +429,7 @@ func initMonitoring(trackPeers bool, constLabels prometheus.Labels) *monitoring 
 			Help:        "Total number of RPC messages received by server.",
 			ConstLabels: constLabels,
 		},
-		appendIf(trackPeers, []string{"service", "handler"}, "peer"),
+		appendIf(trackPeers, []string{"service", "handler", userAgentLabel}, "peer"),
 	)
 	serverSendMessages := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
@@ -431,7 +439,7 @@ func initMonitoring(trackPeers bool, constLabels prometheus.Labels) *monitoring 
 			Help:        "Total number of RPC messages send by server.",
 			ConstLabels: constLabels,
 		},
-		appendIf(trackPeers, []string{"service", "handler"}, "peer"),
+		appendIf(trackPeers, []string{"service", "handler", userAgentLabel}, "peer"),
 	)
 	serverRequestDuration := prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
@@ -441,7 +449,7 @@ func initMonitoring(trackPeers bool, constLabels prometheus.Labels) *monitoring 
 			Help:        "The RPC request latencies in seconds on server side.",
 			ConstLabels: constLabels,
 		},
-		appendIf(trackPeers, []string{"service", "handler", "code", "type"}, "peer"),
+		appendIf(trackPeers, []string{"service", "handler", "code", "type", userAgentLabel}, "peer"),
 	)
 	serverErrors := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
@@ -451,7 +459,7 @@ func initMonitoring(trackPeers bool, constLabels prometheus.Labels) *monitoring 
 			Help:        "Total number of errors that happen during RPC calles on server side.",
 			ConstLabels: constLabels,
 		},
-		appendIf(trackPeers, []string{"service", "handler", "code", "type"}, "peer"),
+		appendIf(trackPeers, []string{"service", "handler", "code", "type", userAgentLabel}, "peer"),
 	)
 
 	clientConnections := prometheus.NewGaugeVec(
@@ -610,6 +618,20 @@ func split(name string) (string, string) {
 		return name[1:i], name[i+1:]
 	}
 	return "unknown", "unknown"
+}
+
+func userAgent(ctx context.Context) string {
+	if md, ok := metadata.FromIncomingContext(ctx); ok {
+		if ua, ok := md["user-agent"]; ok {
+			return ua[0]
+		}
+	}
+	return "not-set"
+}
+
+func withUserAgentLabel(ctx context.Context, lab prometheus.Labels) prometheus.Labels {
+	lab[userAgentLabel] = userAgent(ctx)
+	return lab
 }
 
 func peerValue(ctx context.Context) string {
