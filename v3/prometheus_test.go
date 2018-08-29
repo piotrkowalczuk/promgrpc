@@ -9,6 +9,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/stats"
 )
 
@@ -62,7 +63,7 @@ func TestInterceptor_UnaryServer(t *testing.T) {
 
 func TestInterceptor_StreamServer(t *testing.T) {
 	interceptor := promgrpc.NewInterceptor(promgrpc.InterceptorOpts{TrackPeers: true})
-	err := interceptor.StreamServer()(context.Background(), nil, &grpc.StreamServerInfo{}, func(srv interface{}, stream grpc.ServerStream) error {
+	err := interceptor.StreamServer()(context.Background(), &stubServerStream{}, &grpc.StreamServerInfo{}, func(srv interface{}, stream grpc.ServerStream) error {
 		return nil
 	})
 	if err != nil {
@@ -94,29 +95,37 @@ func TestInterceptor_HandleConn(t *testing.T) {
 	var handler stats.Handler
 	handler = promgrpc.NewInterceptor(promgrpc.InterceptorOpts{})
 
-	ctx := handler.TagConn(context.Background(), &stats.ConnTagInfo{
+	ctxClient := handler.TagConn(context.Background(), &stats.ConnTagInfo{
+		LocalAddr:  &net.TCPAddr{},
+		RemoteAddr: &net.TCPAddr{},
+	})
+	ctxServer := handler.TagConn(context.Background(), &stats.ConnTagInfo{
 		LocalAddr:  &net.TCPAddr{},
 		RemoteAddr: &net.TCPAddr{},
 	})
 
-	handler.HandleConn(ctx, &stats.ConnBegin{})
-	handler.HandleConn(ctx, &stats.ConnBegin{Client: true})
-	handler.HandleConn(ctx, &stats.ConnEnd{})
-	handler.HandleConn(ctx, &stats.ConnEnd{Client: true})
+	handler.HandleConn(ctxServer, &stats.ConnBegin{})
+	handler.HandleConn(ctxClient, &stats.ConnBegin{Client: true})
+	handler.HandleConn(ctxServer, &stats.ConnEnd{})
+	handler.HandleConn(ctxClient, &stats.ConnEnd{Client: true})
 }
 
 func TestInterceptor_HandleRPC(t *testing.T) {
 	var handler stats.Handler
 	handler = promgrpc.NewInterceptor(promgrpc.InterceptorOpts{})
 
-	ctx := handler.TagRPC(context.Background(), &stats.RPCTagInfo{
+	ctxClient := handler.TagRPC(context.Background(), &stats.RPCTagInfo{
 		FullMethodName: "method",
 		FailFast:       true,
 	})
-	handler.HandleRPC(ctx, &stats.Begin{})
-	handler.HandleRPC(ctx, &stats.Begin{Client: true})
-	handler.HandleRPC(ctx, &stats.End{})
-	handler.HandleRPC(ctx, &stats.End{Client: true})
+	ctxServer := handler.TagRPC(context.Background(), &stats.RPCTagInfo{
+		FullMethodName: "method",
+		FailFast:       true,
+	})
+	handler.HandleRPC(ctxServer, &stats.Begin{})
+	handler.HandleRPC(ctxClient, &stats.Begin{Client: true})
+	handler.HandleRPC(ctxServer, &stats.End{})
+	handler.HandleRPC(ctxClient, &stats.End{Client: true})
 }
 
 func TestRegisterInterceptor(t *testing.T) {
@@ -154,4 +163,12 @@ type mockServer map[string]grpc.ServiceInfo
 // GetServiceInfo implements ServiceInfoProvider interface.
 func (ms mockServer) GetServiceInfo() map[string]grpc.ServiceInfo {
 	return ms
+}
+
+type stubServerStream struct {
+	grpc.ServerStream
+}
+
+func (sss *stubServerStream) Context() context.Context {
+	return metadata.NewIncomingContext(context.Background(), metadata.MD{"user-agent": []string{"promgrpc-test"}})
 }
