@@ -48,8 +48,9 @@ func RegisterInterceptor(s ServiceInfoProvider, i *Interceptor) (err error) {
 					userAgentLabel: userAgent(context.TODO()),
 				}
 				messageLabels := prometheus.Labels{
-					"service": sn,
-					"handler": m.Name,
+					"service":      sn,
+					"handler":      m.Name,
+					userAgentLabel: userAgent(context.TODO()),
 				}
 
 				// server
