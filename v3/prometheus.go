@@ -1,6 +1,7 @@
 package promgrpc
 
 import (
+	"fmt"
 	"net"
 	"strconv"
 	"strings"
@@ -53,22 +54,22 @@ func RegisterInterceptor(s ServiceInfoProvider, i *Interceptor) (err error) {
 
 				// server
 				if _, err = i.monitoring.server.errors.GetMetricWith(requestLabels); err != nil {
-					return err
+					return fmt.Errorf("server errors metric initialization failure: %s", err.Error())
 				}
 				if _, err = i.monitoring.server.requestsTotal.GetMetricWith(requestLabels); err != nil {
-					return err
+					return fmt.Errorf("server requests total metric initialization failure: %s", err.Error())
 				}
 				if _, err = i.monitoring.server.requestDuration.GetMetricWith(requestLabels); err != nil {
-					return err
+					return fmt.Errorf("server requests duration metric initialization failure: %s", err.Error())
 				}
 				if m.IsClientStream {
 					if _, err = i.monitoring.server.messagesReceived.GetMetricWith(messageLabels); err != nil {
-						return err
+						return fmt.Errorf("server messages received metric initialization failure: %s", err.Error())
 					}
 				}
 				if m.IsServerStream {
 					if _, err = i.monitoring.server.messagesSend.GetMetricWith(messageLabels); err != nil {
-						return err
+						return fmt.Errorf("server messages send metric initialization failure: %s", err.Error())
 					}
 				}
 			}
