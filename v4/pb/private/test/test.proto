@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package piotrkowalczuk.promgrpc.v4.test;
+
+option go_package = "github.com/piotrkowalczuk/promgrpc/v4/pb/private/test";
+
+service TestService {
+    rpc Unary(Request) returns (Response);
+    rpc ServerSide(Request) returns (stream Response);
+    rpc ClientSide(stream Request) returns (Response);
+    rpc Bidirectional(stream Request) returns (stream Response);
+}
+
+message Request {
+    string value = 1;
+}
+
+message Response{
+    string value = 1;
+}
