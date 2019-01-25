@@ -1,4 +1,7 @@
-all: get test
+all: setup get test
+
+setup:
+	ln -s -f ../../.githooks/pre-commit.sh .git/hooks/pre-commit
 
 test: lint
 	GO111MODULE=on go test -race -cover -coverprofile=cover-v2.out -count=5

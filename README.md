@@ -64,3 +64,7 @@ sop := []grpc.ServerOption{
 
 prometheus.DefaultRegisterer.Register(ict)
 ```
+
+## Development
+
+```make setup```
