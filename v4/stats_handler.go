@@ -2,10 +2,9 @@ package promgrpc
 
 import (
 	"context"
-	"strconv"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc/stats"
+	"strconv"
 )
 
 type StatsHandlerCollector interface {
@@ -51,13 +50,8 @@ func defaultStatsHandler(sub Subsystem) *StatsHandler {
 func (h *StatsHandler) TagRPC(ctx context.Context, inf *stats.RPCTagInfo) context.Context {
 	service, method := split(inf.FullMethodName)
 
-	ctx = context.WithValue(ctx, tagRPCKey, prometheus.Labels{
-		labelIsFailFast: strconv.FormatBool(inf.FailFast),
-		labelService:    service,
-		labelMethod:     method,
-	})
-	ctx = context.WithValue(ctx, tagRPCIndexKey, rpcTag{
-		isFailFast: inf.FailFast,
+	ctx = context.WithValue(ctx, tagRPCKey, rpcTag{
+		isFailFast: strconv.FormatBool(inf.FailFast),
 		service:    service,
 		method:     method,
 	})
@@ -110,14 +104,7 @@ type baseStatsHandler struct {
 
 // HandleRPC implements stats Handler interface.
 func (h *baseStatsHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) context.Context {
-	service, method := split(info.FullMethodName)
-
-	return context.WithValue(ctx, tagRPCKey, rpcTag{
-		isFailFast:      info.FailFast,
-		service:         service,
-		method:          method,
-		clientUserAgent: userAgent(ctx),
-	})
+	return ctx
 }
 
 // TagRPC implements stats Handler interface.

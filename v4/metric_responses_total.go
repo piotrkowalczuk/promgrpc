@@ -2,7 +2,6 @@ package promgrpc
 
 import (
 	"context"
-	"strconv"
 	"strings"
 
 	"google.golang.org/grpc/status"
@@ -32,7 +31,14 @@ func newResponsesTotalCounterVec(sub, name, help string) *prometheus.CounterVec 
 			Name:      name,
 			Help:      help,
 		},
-		[]string{labelIsFailFast, labelService, labelMethod, labelCode, labelClientUserAgent},
+		[]string{
+			// keep alphabetical order
+			labelClientUserAgent,
+			labelCode,
+			labelIsFailFast,
+			labelMethod,
+			labelService,
+		},
 	)
 }
 
@@ -56,18 +62,23 @@ func NewResponsesTotalStatsHandler(sub Subsystem, vec *prometheus.CounterVec) *R
 func (h *ResponsesTotalStatsHandler) HandleRPC(ctx context.Context, stat stats.RPCStats) {
 	if end, ok := stat.(*stats.End); ok {
 		tag := ctx.Value(tagRPCKey).(rpcTag)
-		lab := prometheus.Labels{
-			labelMethod:          tag.method,
-			labelService:         tag.service,
-			labelIsFailFast:      strconv.FormatBool(tag.isFailFast),
-			labelCode:            status.Code(end.Error).String(),
-			labelClientUserAgent: tag.clientUserAgent,
+		// labelClientUserAgent,
+		// labelCode,
+		// labelIsFailFast,
+		// labelMethod,
+		// labelService,
+		lab := []string{
+			tag.clientUserAgent,
+			status.Code(end.Error).String(),
+			tag.isFailFast,
+			tag.method,
+			tag.service,
 		}
 		switch {
 		case stat.IsClient() && h.subsystem == Client:
-			h.vec.With(lab).Inc()
+			h.vec.WithLabelValues(lab...).Inc()
 		case !stat.IsClient() && h.subsystem == Server:
-			h.vec.With(lab).Inc()
+			h.vec.WithLabelValues(lab...).Inc()
 		}
 	}
 }

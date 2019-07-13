@@ -2,7 +2,6 @@ package promgrpc
 
 import (
 	"context"
-	"strconv"
 	"strings"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -17,7 +16,12 @@ func NewRequestsGaugeVec(sub Subsystem) *prometheus.GaugeVec {
 			Name:      "requests_in_flight",
 			Help:      "TODO",
 		},
-		[]string{labelIsFailFast, labelService, labelMethod},
+		[]string{
+			// keep alphabetical order
+			labelIsFailFast,
+			labelMethod,
+			labelService,
+		},
 	)
 }
 
@@ -45,25 +49,26 @@ func (h *RequestsStatsHandler) HandleRPC(ctx context.Context, stat stats.RPCStat
 	case *stats.Begin:
 		switch {
 		case stat.IsClient() && h.subsystem == Client:
-			h.vec.With(h.labels(ctx)).Inc()
+			h.vec.WithLabelValues(h.labels(ctx)...).Inc()
 		case !stat.IsClient() && h.subsystem == Server:
-			h.vec.With(h.labels(ctx)).Inc()
+			h.vec.WithLabelValues(h.labels(ctx)...).Inc()
 		}
 	case *stats.End:
 		switch {
 		case stat.IsClient() && h.subsystem == Client:
-			h.vec.With(h.labels(ctx)).Dec()
+			h.vec.WithLabelValues(h.labels(ctx)...).Dec()
 		case !stat.IsClient() && h.subsystem == Server:
-			h.vec.With(h.labels(ctx)).Dec()
+			h.vec.WithLabelValues(h.labels(ctx)...).Dec()
 		}
 	}
 }
 
-func (h *RequestsStatsHandler) labels(ctx context.Context) prometheus.Labels {
+func (h *RequestsStatsHandler) labels(ctx context.Context) []string {
 	tag := ctx.Value(tagRPCKey).(rpcTag)
-	return  prometheus.Labels{
-		labelMethod:     tag.method,
-		labelService:    tag.service,
-		labelIsFailFast: strconv.FormatBool(tag.isFailFast),
+	// keep alphabetical order
+	return  []string{
+		tag.isFailFast,
+		tag.method,
+		tag.service,
 	}
 }

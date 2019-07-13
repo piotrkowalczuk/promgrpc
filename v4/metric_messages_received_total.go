@@ -2,7 +2,6 @@ package promgrpc
 
 import (
 	"context"
-	"strconv"
 	"strings"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -17,7 +16,12 @@ func NewMessagesReceivedTotalCounterVec(sub Subsystem) *prometheus.CounterVec {
 			Name:      "messages_received_total",
 			Help:      "TODO",
 		},
-		[]string{labelIsFailFast, labelService, labelMethod, labelClientUserAgent},
+		[]string{
+			labelClientUserAgent,
+			labelIsFailFast,
+			labelMethod,
+			labelService,
+		},
 	)
 }
 
@@ -43,17 +47,21 @@ func NewMessagesReceivedTotalStatsHandler(sub Subsystem, vec *prometheus.Counter
 func (h *MessagesReceivedTotalStatsHandler) HandleRPC(ctx context.Context, stat stats.RPCStats) {
 	if _, ok := stat.(*stats.InPayload); ok {
 		tag := ctx.Value(tagRPCKey).(rpcTag)
-		lab := prometheus.Labels{
-			labelMethod:          tag.method,
-			labelService:         tag.service,
-			labelIsFailFast:      strconv.FormatBool(tag.isFailFast),
-			labelClientUserAgent: tag.clientUserAgent,
+		// labelClientUserAgent,
+		// labelIsFailFast,
+		// labelMethod,
+		// labelService,
+		lab := []string{
+			tag.clientUserAgent,
+			tag.isFailFast,
+			tag.method,
+			tag.service,
 		}
 		switch {
 		case stat.IsClient() && h.subsystem == Client:
-			h.vec.With(lab).Inc()
+			h.vec.WithLabelValues(lab...).Inc()
 		case !stat.IsClient() && h.subsystem == Server:
-			h.vec.With(lab).Inc()
+			h.vec.WithLabelValues(lab...).Inc()
 		}
 	}
 }

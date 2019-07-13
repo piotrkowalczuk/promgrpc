@@ -1,7 +1,7 @@
 package promgrpc
 
 type rpcTag struct {
-	isFailFast      bool
+	isFailFast      string
 	service         string
 	method          string
 	clientUserAgent string

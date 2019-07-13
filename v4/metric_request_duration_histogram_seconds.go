@@ -2,7 +2,6 @@ package promgrpc
 
 import (
 	"context"
-	"strconv"
 	"strings"
 
 	"google.golang.org/grpc/status"
@@ -19,7 +18,13 @@ func NewRequestDurationHistogramVec(sub Subsystem) *prometheus.HistogramVec {
 			Name:      "request_duration_histogram_seconds",
 			Help:      "TODO",
 		},
-		[]string{labelIsFailFast, labelService, labelMethod, labelCode, labelClientUserAgent},
+		[]string{
+			labelClientUserAgent,
+			labelCode,
+			labelIsFailFast,
+			labelMethod,
+			labelService,
+		},
 	)
 }
 
@@ -43,18 +48,18 @@ func NewRequestDurationStatsHandler(sub Subsystem, vec *prometheus.HistogramVec)
 func (h *RequestDurationStatsHandler) HandleRPC(ctx context.Context, stat stats.RPCStats) {
 	if end, ok := stat.(*stats.End); ok {
 		tag := ctx.Value(tagRPCKey).(rpcTag)
-		lab := prometheus.Labels{
-			labelMethod:          tag.method,
-			labelService:         tag.service,
-			labelIsFailFast:      strconv.FormatBool(tag.isFailFast),
-			labelCode:            status.Code(end.Error).String(),
-			labelClientUserAgent: tag.clientUserAgent,
+		lab := []string{
+			tag.clientUserAgent,
+			status.Code(end.Error).String(),
+			tag.isFailFast,
+			tag.method,
+			tag.service,
 		}
 		switch {
 		case stat.IsClient() && h.subsystem == Client:
-			h.vec.With(lab).Observe(end.EndTime.Sub(end.BeginTime).Seconds())
+			h.vec.WithLabelValues(lab...).Observe(end.EndTime.Sub(end.BeginTime).Seconds())
 		case !stat.IsClient() && h.subsystem == Server:
-			h.vec.With(lab).Observe(end.EndTime.Sub(end.BeginTime).Seconds())
+			h.vec.WithLabelValues(lab...).Observe(end.EndTime.Sub(end.BeginTime).Seconds())
 		}
 	}
 }
