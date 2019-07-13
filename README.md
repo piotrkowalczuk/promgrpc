@@ -11,7 +11,7 @@ Library allows to monitor gRPC based client and server applications.
 | v1.0.2 | glide | interceptors | `^1.0.0` | `~0.8.0` |
 | v2.0.2 | modules| interceptors + [stats.Handler](https://godoc.org/google.golang.org/grpc/stats#Handler) | `1.13.0` | `0.8.0` |
 | v3.2.2 | modules | interceptors + [stats.Handler](https://godoc.org/google.golang.org/grpc/stats#Handler) | `1.13.0` | `0.8.0` |
-| v4.0.0 (in progress) | modules | [stats.Handler](https://godoc.org/google.golang.org/grpc/stats#Handler) | `1.16.0` | `0.9.2` |
+| v4.0.0 (in progress) | modules | [stats.Handler](https://godoc.org/google.golang.org/grpc/stats#Handler) | `1.16.0` | `1.0.0` |
 
 ## Metrics
 
