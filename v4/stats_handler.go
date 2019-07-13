@@ -5,23 +5,19 @@ import (
 	"strconv"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/stats"
 )
 
 type StatsHandlerCollector interface {
-	// Init reallocates possible dimensions for given metric.
-	Init(map[string]grpc.ServiceInfo) error
-
 	stats.Handler
 	prometheus.Collector
 }
 
+var _ StatsHandlerCollector = &StatsHandler{}
+
 type StatsHandler struct {
 	handlers []StatsHandlerCollector
 }
-
-var _ StatsHandlerCollector = &StatsHandler{}
 
 // NewStatsHandler allows to pass various number of handlers.
 func NewStatsHandler(handlers ...StatsHandlerCollector) *StatsHandler {
@@ -52,19 +48,18 @@ func defaultStatsHandler(sub Subsystem) *StatsHandler {
 	)
 }
 
-// Init implements StatsHandlerCollector interface.
-// TODO: implement
-func (h *StatsHandler) Init(info map[string]grpc.ServiceInfo) error {
-	return nil
-}
-
 func (h *StatsHandler) TagRPC(ctx context.Context, inf *stats.RPCTagInfo) context.Context {
 	service, method := split(inf.FullMethodName)
 
 	ctx = context.WithValue(ctx, tagRPCKey, prometheus.Labels{
-		labelFailFast: strconv.FormatBool(inf.FailFast),
-		labelService:  service,
-		labelMethod:   method,
+		labelIsFailFast: strconv.FormatBool(inf.FailFast),
+		labelService:    service,
+		labelMethod:     method,
+	})
+	ctx = context.WithValue(ctx, tagRPCIndexKey, rpcTag{
+		isFailFast: inf.FailFast,
+		service:    service,
+		method:     method,
 	})
 
 	for _, c := range h.handlers {
@@ -117,11 +112,11 @@ type baseStatsHandler struct {
 func (h *baseStatsHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) context.Context {
 	service, method := split(info.FullMethodName)
 
-	return context.WithValue(ctx, tagRPCKey, prometheus.Labels{
-		labelFailFast:        strconv.FormatBool(info.FailFast),
-		labelService:         service,
-		labelMethod:          method,
-		labelClientUserAgent: userAgent(ctx),
+	return context.WithValue(ctx, tagRPCKey, rpcTag{
+		isFailFast:      info.FailFast,
+		service:         service,
+		method:          method,
+		clientUserAgent: userAgent(ctx),
 	})
 }
 

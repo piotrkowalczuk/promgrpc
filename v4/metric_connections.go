@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/stats"
 )
 
@@ -37,29 +36,26 @@ func NewConnectionsStatsHandler(sub Subsystem, vec *prometheus.GaugeVec) *Connec
 	}
 }
 
-// Init implements StatsHandlerCollector interface.
-func (h *ConnectionsStatsHandler) Init(info map[string]grpc.ServiceInfo) error {
-	return nil // TODO: implement
-}
-
 // HandleRPC processes the RPC stats.
 func (h *ConnectionsStatsHandler) HandleConn(ctx context.Context, stat stats.ConnStats) {
-	lab, _ := ctx.Value(tagConnKey).(prometheus.Labels)
-
 	switch stat.(type) {
 	case *stats.ConnBegin:
 		switch {
 		case stat.IsClient() && h.subsystem == Client:
-			h.vec.With(lab).Inc()
+			h.vec.With(h.labels(ctx)).Inc()
 		case !stat.IsClient() && h.subsystem == Server:
-			h.vec.With(lab).Inc()
+			h.vec.With(h.labels(ctx)).Inc()
 		}
 	case *stats.ConnEnd:
 		switch {
 		case stat.IsClient() && h.subsystem == Client:
-			h.vec.With(lab).Dec()
+			h.vec.With(h.labels(ctx)).Dec()
 		case !stat.IsClient() && h.subsystem == Server:
-			h.vec.With(lab).Dec()
+			h.vec.With(h.labels(ctx)).Dec()
 		}
 	}
+}
+
+func (h *ConnectionsStatsHandler) labels(ctx context.Context) prometheus.Labels {
+	return ctx.Value(tagConnKey).(prometheus.Labels)
 }

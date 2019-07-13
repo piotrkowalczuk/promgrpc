@@ -2,10 +2,10 @@ package promgrpc
 
 import (
 	"context"
+	"strconv"
 	"strings"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/stats"
 )
 
@@ -30,7 +30,7 @@ func newRequestsTotalCounterVec(sub, name, help string) *prometheus.CounterVec {
 			Name:      name,
 			Help:      help,
 		},
-		[]string{labelFailFast, labelService, labelMethod, labelClientUserAgent},
+		[]string{labelIsFailFast, labelService, labelMethod},
 	)
 }
 
@@ -52,16 +52,15 @@ func NewRequestsTotalStatsHandler(sub Subsystem, vec *prometheus.CounterVec) *Re
 	}
 }
 
-// Init implements StatsHandlerCollector interface.
-func (h *RequestsTotalStatsHandler) Init(info map[string]grpc.ServiceInfo) error {
-	return nil // TODO: implement
-}
-
 // HandleRPC implements stats Handler interface.
 func (h *RequestsTotalStatsHandler) HandleRPC(ctx context.Context, stat stats.RPCStats) {
-	lab, _ := ctx.Value(tagRPCKey).(prometheus.Labels)
-
 	if beg, ok := stat.(*stats.Begin); ok {
+		tag := ctx.Value(tagRPCKey).(rpcTag)
+		lab := prometheus.Labels{
+			labelMethod:     tag.method,
+			labelService:    tag.service,
+			labelIsFailFast: strconv.FormatBool(tag.isFailFast),
+		}
 		switch {
 		case beg.IsClient() && h.subsystem == Client:
 			h.vec.With(lab).Inc()

@@ -25,5 +25,5 @@ get:
 #	go get -u honnef.co/go/tools/...
 
 gen:
-	protoc --go_out plugins=grpc:${GOPATH}/src v4/pb/private/test/test.proto
+	protoc --go_out=${GOPATH}/src --go-grpc_out=${GOPATH}/src v4/pb/private/test/test.proto
 	goimports -w ./v4/pb/

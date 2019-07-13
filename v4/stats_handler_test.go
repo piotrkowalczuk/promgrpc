@@ -128,6 +128,8 @@ func listener(t *testing.T) net.Listener {
 }
 
 func registerCollector(t *testing.T, r *prometheus.Registry, c prometheus.Collector) {
+	t.Helper()
+
 	if err := r.Register(c); err != nil {
 		t.Fatal(err)
 	}
@@ -142,7 +144,7 @@ func assertMetric(t *testing.T, g prometheus.Gatherer, n string, exp float64) {
 	}
 
 	name := strings.TrimSuffix(n, "_sum")
-	name = strings.TrimSuffix(n, "_count")
+	name = strings.TrimSuffix(name, "_count")
 
 	for _, m := range mf {
 		if m.GetName() == name {

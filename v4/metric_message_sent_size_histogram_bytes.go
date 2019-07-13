@@ -2,10 +2,10 @@ package promgrpc
 
 import (
 	"context"
+	"strconv"
 	"strings"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/stats"
 )
 
@@ -17,7 +17,7 @@ func NewMessageSentSizeHistogramVec(sub Subsystem) *prometheus.HistogramVec {
 			Name:      "message_sent_size_histogram_bytes",
 			Help:      "TODO",
 		},
-		[]string{labelFailFast, labelService, labelMethod, labelClientUserAgent},
+		[]string{labelIsFailFast, labelService, labelMethod, labelClientUserAgent},
 	)
 }
 
@@ -37,16 +37,16 @@ func NewMessageSentSizeStatsHandler(sub Subsystem, vec *prometheus.HistogramVec)
 	}
 }
 
-// Init implements StatsHandlerCollector interface.
-func (h *MessageSentSizeStatsHandler) Init(info map[string]grpc.ServiceInfo) error {
-	return nil // TODO: implement
-}
-
 // HandleRPC implements stats Handler interface.
 func (h *MessageSentSizeStatsHandler) HandleRPC(ctx context.Context, stat stats.RPCStats) {
-	lab, _ := ctx.Value(tagRPCKey).(prometheus.Labels)
-
 	if pay, ok := stat.(*stats.OutPayload); ok {
+		tag := ctx.Value(tagRPCKey).(rpcTag)
+		lab := prometheus.Labels{
+			labelMethod:          tag.method,
+			labelService:         tag.service,
+			labelIsFailFast:      strconv.FormatBool(tag.isFailFast),
+			labelClientUserAgent: tag.clientUserAgent,
+		}
 		switch {
 		case stat.IsClient() && h.subsystem == Client:
 			h.vec.With(lab).Observe(float64(pay.Length))

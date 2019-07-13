@@ -4,4 +4,4 @@ glide.lock
 *.iml
 *.out
 *.log
-*.sum
+*.out

@@ -6,36 +6,33 @@ import (
 	"context"
 	"strings"
 
-	_ "github.com/golang/protobuf/proto"
 	"google.golang.org/grpc/metadata"
 )
 
 const (
-	namespace    = "grpc"
-	labelService = "grpc_service"
-	labelMethod  = "grpc_method"
-	//labelType      = "grpc_type"
-	//labelCode      = "grpc_code"
-	//labelUserAgent = "grpc_user_agent"
-	labelFailFast        = "grpc_fail_fast"
+	namespace            = "grpc"
+	labelService         = "grpc_service"
+	labelMethod          = "grpc_method"
+	labelCode            = "grpc_code"
+	labelIsFailFast      = "grpc_is_fail_fast"
 	labelRemoteAddr      = "grpc_remote_addr"
 	labelLocalAddr       = "grpc_local_addr"
 	labelClientUserAgent = "grpc_client_user_agent"
-	labelServerUserAgent = "grpc_server_user_agent"
 )
 
 type ctxKey int
 
 var (
-	tagRPCKey  ctxKey = 1
-	tagConnKey ctxKey = 2
+	tagRPCKey      ctxKey = 1
+	tagRPCIndexKey ctxKey = 2
+	tagConnKey     ctxKey = 3
 )
 
 type Subsystem int
 
-var (
-	Server Subsystem = 1
-	Client Subsystem = 2
+const (
+	Server Subsystem = iota + 1
+	Client
 )
 
 func split(name string) (string, string) {
@@ -51,5 +48,5 @@ func userAgent(ctx context.Context) string {
 			return ua[0]
 		}
 	}
-	return "not-set"
+	return "n/a"
 }

@@ -2,10 +2,10 @@ package promgrpc
 
 import (
 	"context"
+	"strconv"
 	"strings"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/stats"
 )
 
@@ -17,25 +17,14 @@ func NewRequestsGaugeVec(sub Subsystem) *prometheus.GaugeVec {
 			Name:      "requests_in_flight",
 			Help:      "TODO",
 		},
-		[]string{labelFailFast, labelService, labelMethod, labelClientUserAgent},
-	)
-}
-
-func newRequestsGaugeVec(sub, name, help string) *prometheus.GaugeVec {
-	return prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Namespace: namespace,
-			Subsystem: sub,
-			Name:      name,
-			Help:      help,
-		},
-		[]string{labelFailFast, labelService, labelMethod, labelClientUserAgent},
+		[]string{labelIsFailFast, labelService, labelMethod},
 	)
 }
 
 type RequestsStatsHandler struct {
 	baseStatsHandler
 	vec *prometheus.GaugeVec
+	idx map[rpcTag]prometheus.Gauge
 }
 
 // NewRequestsStatsHandler ...
@@ -46,32 +35,35 @@ func NewRequestsStatsHandler(sub Subsystem, vec *prometheus.GaugeVec) *RequestsS
 			collector: vec,
 		},
 		vec: vec,
+		idx: make(map[rpcTag]prometheus.Gauge),
 	}
-}
-
-// Init implements StatsHandlerCollector interface.
-func (h *RequestsStatsHandler) Init(info map[string]grpc.ServiceInfo) error {
-	return nil // TODO: implement
 }
 
 // HandleRPC processes the RPC stats.
 func (h *RequestsStatsHandler) HandleRPC(ctx context.Context, stat stats.RPCStats) {
-	lab, _ := ctx.Value(tagRPCKey).(prometheus.Labels)
-
 	switch stat.(type) {
 	case *stats.Begin:
 		switch {
 		case stat.IsClient() && h.subsystem == Client:
-			h.vec.With(lab).Inc()
+			h.vec.With(h.labels(ctx)).Inc()
 		case !stat.IsClient() && h.subsystem == Server:
-			h.vec.With(lab).Inc()
+			h.vec.With(h.labels(ctx)).Inc()
 		}
 	case *stats.End:
 		switch {
 		case stat.IsClient() && h.subsystem == Client:
-			h.vec.With(lab).Dec()
+			h.vec.With(h.labels(ctx)).Dec()
 		case !stat.IsClient() && h.subsystem == Server:
-			h.vec.With(lab).Dec()
+			h.vec.With(h.labels(ctx)).Dec()
 		}
+	}
+}
+
+func (h *RequestsStatsHandler) labels(ctx context.Context) prometheus.Labels {
+	tag := ctx.Value(tagRPCKey).(rpcTag)
+	return  prometheus.Labels{
+		labelMethod:     tag.method,
+		labelService:    tag.service,
+		labelIsFailFast: strconv.FormatBool(tag.isFailFast),
 	}
 }

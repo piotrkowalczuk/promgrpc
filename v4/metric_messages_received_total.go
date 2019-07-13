@@ -2,10 +2,10 @@ package promgrpc
 
 import (
 	"context"
+	"strconv"
 	"strings"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/stats"
 )
 
@@ -17,8 +17,7 @@ func NewMessagesReceivedTotalCounterVec(sub Subsystem) *prometheus.CounterVec {
 			Name:      "messages_received_total",
 			Help:      "TODO",
 		},
-		[]string{labelFailFast, labelService, labelMethod, labelClientUserAgent},
-		//[]string{labelType, labelService, labelMethod}, TODO: IsServerStream and IsClientStream not available outside interceptors. Type label cannot be used.
+		[]string{labelIsFailFast, labelService, labelMethod, labelClientUserAgent},
 	)
 }
 
@@ -40,16 +39,16 @@ func NewMessagesReceivedTotalStatsHandler(sub Subsystem, vec *prometheus.Counter
 	}
 }
 
-// Init implements StatsHandlerCollector interface.
-func (h *MessagesReceivedTotalStatsHandler) Init(info map[string]grpc.ServiceInfo) error {
-	return nil // TODO: implement
-}
-
 // HandleRPC implements stats Handler interface.
 func (h *MessagesReceivedTotalStatsHandler) HandleRPC(ctx context.Context, stat stats.RPCStats) {
-	lab, _ := ctx.Value(tagRPCKey).(prometheus.Labels)
-
 	if _, ok := stat.(*stats.InPayload); ok {
+		tag := ctx.Value(tagRPCKey).(rpcTag)
+		lab := prometheus.Labels{
+			labelMethod:          tag.method,
+			labelService:         tag.service,
+			labelIsFailFast:      strconv.FormatBool(tag.isFailFast),
+			labelClientUserAgent: tag.clientUserAgent,
+		}
 		switch {
 		case stat.IsClient() && h.subsystem == Client:
 			h.vec.With(lab).Inc()
