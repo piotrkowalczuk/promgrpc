@@ -29,18 +29,6 @@ func NewRequestDurationHistogramVec(sub Subsystem, opts ...CollectorOption) *pro
 	)
 }
 
-// RequestDurationLabels ...
-func RequestDurationLabels(ctx context.Context, stat stats.RPCStats) []string {
-	tag := ctx.Value(tagRPCKey).(rpcTag)
-	return []string{
-		tag.clientUserAgent,
-		status.Code(stat.(*stats.End).Error).String(),
-		tag.isFailFast,
-		tag.method,
-		tag.service,
-	}
-}
-
 type RequestDurationStatsHandler struct {
 	baseStatsHandler
 	vec prometheus.ObserverVec
@@ -53,7 +41,7 @@ func NewRequestDurationStatsHandler(sub Subsystem, vec prometheus.ObserverVec, o
 			subsystem: sub,
 			collector: vec,
 			options: statsHandlerOptions{
-				rpcLabelFn: RequestDurationLabels,
+				rpcLabelFn: requestDurationLabels,
 			},
 		},
 		vec: vec,
@@ -77,5 +65,16 @@ func (h *RequestDurationStatsHandler) HandleRPC(ctx context.Context, stat stats.
 				WithLabelValues(h.options.rpcLabelFn(ctx, stat)...).
 				Observe(end.EndTime.Sub(end.BeginTime).Seconds())
 		}
+	}
+}
+
+func requestDurationLabels(ctx context.Context, stat stats.RPCStats) []string {
+	tag := ctx.Value(tagRPCKey).(rpcTag)
+	return []string{
+		tag.clientUserAgent,
+		status.Code(stat.(*stats.End).Error).String(),
+		tag.isFailFast,
+		tag.method,
+		tag.service,
 	}
 }

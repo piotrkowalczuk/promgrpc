@@ -26,17 +26,6 @@ func NewRequestsInFlightGaugeVec(sub Subsystem, opts ...CollectorOption) *promet
 	)
 }
 
-// RequestsInFlightLabels ...
-func RequestsInFlightLabels(ctx context.Context, _ stats.RPCStats) []string {
-	tag := ctx.Value(tagRPCKey).(rpcTag)
-	// keep alphabetical order
-	return []string{
-		tag.isFailFast,
-		tag.method,
-		tag.service,
-	}
-}
-
 type RequestsInFlightStatsHandler struct {
 	baseStatsHandler
 	vec *prometheus.GaugeVec
@@ -49,7 +38,7 @@ func NewRequestsInFlightStatsHandler(sub Subsystem, vec *prometheus.GaugeVec, op
 			subsystem: sub,
 			collector: vec,
 			options: statsHandlerOptions{
-				rpcLabelFn: RequestsInFlightLabels,
+				rpcLabelFn: requestsInFlightLabels,
 			},
 		},
 		vec: vec,
@@ -77,5 +66,15 @@ func (h *RequestsInFlightStatsHandler) HandleRPC(ctx context.Context, stat stats
 		case !stat.IsClient() && h.subsystem == Server:
 			h.vec.WithLabelValues(h.options.rpcLabelFn(ctx, stat)...).Dec()
 		}
+	}
+}
+
+func requestsInFlightLabels(ctx context.Context, _ stats.RPCStats) []string {
+	tag := ctx.Value(tagRPCKey).(rpcTag)
+	// keep alphabetical order
+	return []string{
+		tag.isFailFast,
+		tag.method,
+		tag.service,
 	}
 }

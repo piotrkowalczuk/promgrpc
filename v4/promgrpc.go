@@ -23,8 +23,8 @@ const (
 type ctxKey int
 
 var (
-	tagRPCKey      ctxKey = 1
-	tagConnKey     ctxKey = 3
+	tagRPCKey  ctxKey = 1
+	tagConnKey ctxKey = 3
 )
 
 type Subsystem int

@@ -38,16 +38,6 @@ func newRequestsTotalCounterVec(sub, name, help string, opts ...CollectorOption)
 	)
 }
 
-// RequestsTotalLabels ...
-func RequestsTotalLabels(ctx context.Context, _ stats.RPCStats) []string {
-	tag := ctx.Value(tagRPCKey).(rpcTag)
-	return []string{
-		tag.isFailFast,
-		tag.method,
-		tag.service,
-	}
-}
-
 type RequestsTotalStatsHandler struct {
 	baseStatsHandler
 	vec *prometheus.CounterVec
@@ -62,7 +52,7 @@ func NewRequestsTotalStatsHandler(sub Subsystem, vec *prometheus.CounterVec, opt
 			subsystem: sub,
 			collector: vec,
 			options: statsHandlerOptions{
-				rpcLabelFn: RequestsTotalLabels,
+				rpcLabelFn: requestsTotalLabels,
 			},
 		},
 		vec: vec,
@@ -82,5 +72,14 @@ func (h *RequestsTotalStatsHandler) HandleRPC(ctx context.Context, stat stats.RP
 		case !beg.IsClient() && h.subsystem == Server:
 			h.vec.WithLabelValues(h.options.rpcLabelFn(ctx, stat)...).Inc()
 		}
+	}
+}
+
+func requestsTotalLabels(ctx context.Context, _ stats.RPCStats) []string {
+	tag := ctx.Value(tagRPCKey).(rpcTag)
+	return []string{
+		tag.isFailFast,
+		tag.method,
+		tag.service,
 	}
 }

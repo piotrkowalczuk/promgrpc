@@ -26,17 +26,6 @@ func NewMessagesSentTotalCounterVec(sub Subsystem, opts ...CollectorOption) *pro
 	)
 }
 
-// MessagesSentTotalLabels ...
-func MessagesSentTotalLabels(ctx context.Context, _ stats.RPCStats) []string {
-	tag := ctx.Value(tagRPCKey).(rpcTag)
-	return []string{
-		tag.clientUserAgent,
-		tag.isFailFast,
-		tag.method,
-		tag.service,
-	}
-}
-
 type MessagesSentTotalStatsHandler struct {
 	baseStatsHandler
 	vec *prometheus.CounterVec
@@ -51,7 +40,7 @@ func NewMessagesSentTotalStatsHandler(sub Subsystem, vec *prometheus.CounterVec,
 			subsystem: sub,
 			collector: vec,
 			options: statsHandlerOptions{
-				rpcLabelFn: MessagesSentTotalLabels,
+				rpcLabelFn: messagesSentTotalLabels,
 			},
 		},
 		vec: vec,
@@ -71,5 +60,15 @@ func (h *MessagesSentTotalStatsHandler) HandleRPC(ctx context.Context, stat stat
 		case !stat.IsClient() && h.subsystem == Server:
 			h.vec.WithLabelValues(h.options.rpcLabelFn(ctx, stat)...).Inc()
 		}
+	}
+}
+
+func messagesSentTotalLabels(ctx context.Context, _ stats.RPCStats) []string {
+	tag := ctx.Value(tagRPCKey).(rpcTag)
+	return []string{
+		tag.clientUserAgent,
+		tag.isFailFast,
+		tag.method,
+		tag.service,
 	}
 }

@@ -26,17 +26,6 @@ func NewMessageReceivedSizeHistogramVec(sub Subsystem, opts ...CollectorOption) 
 	)
 }
 
-// MessageReceivedSizeLabels ...
-func MessageReceivedSizeLabels(ctx context.Context, _ stats.RPCStats) []string {
-	tag := ctx.Value(tagRPCKey).(rpcTag)
-	return []string{
-		tag.clientUserAgent,
-		tag.isFailFast,
-		tag.method,
-		tag.service,
-	}
-}
-
 type MessageReceivedSizeStatsHandler struct {
 	baseStatsHandler
 	vec prometheus.ObserverVec
@@ -49,7 +38,7 @@ func NewMessageReceivedSizeStatsHandler(sub Subsystem, vec prometheus.ObserverVe
 			subsystem: sub,
 			collector: vec,
 			options: statsHandlerOptions{
-				rpcLabelFn: MessageReceivedSizeLabels,
+				rpcLabelFn: messageReceivedSizeLabels,
 			},
 		},
 		vec: vec,
@@ -69,5 +58,15 @@ func (h *MessageReceivedSizeStatsHandler) HandleRPC(ctx context.Context, stat st
 		case !stat.IsClient() && h.subsystem == Server:
 			h.vec.WithLabelValues(h.options.rpcLabelFn(ctx, stat)...).Observe(float64(pay.Length))
 		}
+	}
+}
+
+func messageReceivedSizeLabels(ctx context.Context, _ stats.RPCStats) []string {
+	tag := ctx.Value(tagRPCKey).(rpcTag)
+	return []string{
+		tag.clientUserAgent,
+		tag.isFailFast,
+		tag.method,
+		tag.service,
 	}
 }
