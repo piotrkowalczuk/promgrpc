@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"os"
 	"testing"
 	"time"
 
@@ -15,20 +14,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-func ExampleStatsHandler() {
-	assertErr := func(err error) {
-		if err != nil {
-			fmt.Println("ERR:", err)
-			os.Exit(1)
-		}
-	}
-	// Listen an actual port.
-	lis, err := net.Listen("tcp", "127.0.0.1:0")
-	assertErr(err)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
+func Example() {
 	reg := prometheus.NewRegistry()
 
 	ssh := promgrpc.ServerStatsHandler(
@@ -45,70 +31,6 @@ func ExampleStatsHandler() {
 	test.RegisterTestServiceServer(srv, imp)
 	reg.MustRegister(ssh)
 	reg.MustRegister(csh)
-
-	go func() {
-		if err := srv.Serve(lis); err != grpc.ErrServerStopped {
-			assertErr(err)
-		}
-	}()
-
-	con, err := grpc.DialContext(ctx, lis.Addr().String(), grpc.WithInsecure(), grpc.WithBlock(), grpc.WithStatsHandler(csh))
-	assertErr(err)
-
-	for i := 0; i < 100; i++ {
-		_, err = test.NewTestServiceClient(con).Unary(ctx, &test.Request{Value: "example"})
-		assertErr(err)
-	}
-
-	ss, err := test.NewTestServiceClient(con).ServerSide(ctx, &test.Request{Value: "example"})
-	assertErr(err)
-
-	for {
-		_, err := ss.Recv()
-		if err == io.EOF {
-			break
-		}
-		assertErr(err)
-	}
-
-	cs, err := test.NewTestServiceClient(con).ClientSide(ctx)
-	assertErr(err)
-
-	for i := 0; i < 10; i++ {
-		err := cs.SendMsg(&test.Response{
-			Value: fmt.Sprintf("client-side-%d", i),
-		})
-		assertErr(err)
-	}
-
-	srv.GracefulStop()
-
-	mf, err := reg.Gather()
-	assertErr(err)
-
-	for _, m := range mf {
-		fmt.Println(m.GetName())
-	}
-
-	// Output:
-	// example_server_connections
-	// example_server_message_received_size_histogram_bytes
-	// example_server_message_sent_size_histogram_bytes
-	// example_server_messages_received_total
-	// example_server_messages_sent_total
-	// example_server_request_duration_histogram_seconds
-	// example_server_requests_in_flight
-	// example_server_requests_received_total
-	// example_server_responses_sent_total
-	// grpc_client_connections
-	// grpc_client_message_received_size_histogram_bytes
-	// grpc_client_message_sent_size_histogram_bytes
-	// grpc_client_messages_received_total
-	// grpc_client_messages_sent_total
-	// grpc_client_request_duration_histogram_seconds
-	// grpc_client_requests_in_flight
-	// grpc_client_requests_sent_total
-	// grpc_client_responses_received_total
 }
 
 func BenchmarkUnary_all(b *testing.B) {
