@@ -17,8 +17,12 @@ func suite(t *testing.T) (test.TestServiceClient, *prometheus.Registry, func(*te
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	ssh := promgrpc.ServerStatsHandler()
-	csh := promgrpc.ClientStatsHandler()
+	ssh := promgrpc.ServerStatsHandler(
+		promgrpc.CollectorWithConstLabels(prometheus.Labels{"service": "test"}),
+	)
+	csh := promgrpc.ClientStatsHandler(
+		promgrpc.CollectorWithConstLabels(prometheus.Labels{"service": "test"}),
+	)
 	srv := grpc.NewServer(grpc.StatsHandler(ssh))
 
 	test.RegisterTestServiceServer(srv, newDemoServer())

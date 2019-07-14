@@ -10,27 +10,28 @@ import (
 	"google.golang.org/grpc/stats"
 )
 
-func NewResponsesTotalCounterVec(sub Subsystem) *prometheus.CounterVec {
+func NewResponsesTotalCounterVec(sub Subsystem, opts ...CollectorOption) *prometheus.CounterVec {
 	subsystem := strings.ToLower(sub.String())
 	switch sub {
 	case Server:
-		return newResponsesTotalCounterVec(subsystem, "responses_sent_total", "TODO")
+		return newResponsesTotalCounterVec(subsystem, "responses_sent_total", "TODO", opts...)
 	case Client:
-		return newResponsesTotalCounterVec(subsystem, "responses_received_total", "TODO")
+		return newResponsesTotalCounterVec(subsystem, "responses_received_total", "TODO", opts...)
 	default:
 		// TODO: panic?
 		panic("unknown subsystem")
 	}
 }
 
-func newResponsesTotalCounterVec(sub, name, help string) *prometheus.CounterVec {
+func newResponsesTotalCounterVec(sub, name, help string, opts ...CollectorOption) *prometheus.CounterVec {
+	prototype := prometheus.Opts{
+		Namespace: namespace,
+		Subsystem: sub,
+		Name:      name,
+		Help:      help,
+	}
 	return prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Namespace: namespace,
-			Subsystem: sub,
-			Name:      name,
-			Help:      help,
-		},
+		prometheus.CounterOpts(applyCollectorOptions(prototype, opts...)),
 		[]string{
 			// keep alphabetical order
 			labelClientUserAgent,
@@ -42,43 +43,49 @@ func newResponsesTotalCounterVec(sub, name, help string) *prometheus.CounterVec 
 	)
 }
 
+// ResponsesTotalLabels ...
+func ResponsesTotalLabels(ctx context.Context, stat stats.RPCStats) []string {
+	tag := ctx.Value(tagRPCKey).(rpcTag)
+	return []string{
+		tag.clientUserAgent,
+		status.Code(stat.(*stats.End).Error).String(),
+		tag.isFailFast,
+		tag.method,
+		tag.service,
+	}
+}
+
 type ResponsesTotalStatsHandler struct {
 	baseStatsHandler
 	vec *prometheus.CounterVec
 }
 
 // NewResponsesTotalStatsHandler ...
-func NewResponsesTotalStatsHandler(sub Subsystem, vec *prometheus.CounterVec) *ResponsesTotalStatsHandler {
-	return &ResponsesTotalStatsHandler{
+func NewResponsesTotalStatsHandler(sub Subsystem, vec *prometheus.CounterVec, opts ...StatsHandlerOption) *ResponsesTotalStatsHandler {
+	h := &ResponsesTotalStatsHandler{
 		baseStatsHandler: baseStatsHandler{
 			subsystem: sub,
 			collector: vec,
+			options: statsHandlerOptions{
+				rpcLabelFn: ResponsesTotalLabels,
+			},
 		},
 		vec: vec,
 	}
+	for _, opt := range opts {
+		opt.apply(&h.options)
+	}
+	return h
 }
 
 // HandleRPC implements stats Handler interface.
 func (h *ResponsesTotalStatsHandler) HandleRPC(ctx context.Context, stat stats.RPCStats) {
-	if end, ok := stat.(*stats.End); ok {
-		tag := ctx.Value(tagRPCKey).(rpcTag)
-		// labelClientUserAgent,
-		// labelCode,
-		// labelIsFailFast,
-		// labelMethod,
-		// labelService,
-		lab := []string{
-			tag.clientUserAgent,
-			status.Code(end.Error).String(),
-			tag.isFailFast,
-			tag.method,
-			tag.service,
-		}
+	if _, ok := stat.(*stats.End); ok {
 		switch {
 		case stat.IsClient() && h.subsystem == Client:
-			h.vec.WithLabelValues(lab...).Inc()
+			h.vec.WithLabelValues(h.options.rpcLabelFn(ctx, stat)...).Inc()
 		case !stat.IsClient() && h.subsystem == Server:
-			h.vec.WithLabelValues(lab...).Inc()
+			h.vec.WithLabelValues(h.options.rpcLabelFn(ctx, stat)...).Inc()
 		}
 	}
 }

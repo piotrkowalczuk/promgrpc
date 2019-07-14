@@ -3,15 +3,16 @@ package promgrpc_test
 import (
 	"context"
 	"fmt"
-	"github.com/piotrkowalczuk/promgrpc/v4"
-	"github.com/piotrkowalczuk/promgrpc/v4/pb/private/test"
-	"github.com/prometheus/client_golang/prometheus"
-	"google.golang.org/grpc"
 	"io"
 	"net"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/piotrkowalczuk/promgrpc/v4"
+	"github.com/piotrkowalczuk/promgrpc/v4/pb/private/test"
+	"github.com/prometheus/client_golang/prometheus"
+	"google.golang.org/grpc"
 )
 
 func ExampleStatsHandler() {
@@ -30,8 +31,13 @@ func ExampleStatsHandler() {
 
 	reg := prometheus.NewRegistry()
 
-	ssh := promgrpc.ServerStatsHandler()
-	csh := promgrpc.ClientStatsHandler()
+	ssh := promgrpc.ServerStatsHandler(
+		promgrpc.CollectorWithNamespace("example"),
+		promgrpc.CollectorWithConstLabels(prometheus.Labels{"service": "foo"}),
+	)
+	csh := promgrpc.ClientStatsHandler(
+		promgrpc.CollectorWithConstLabels(prometheus.Labels{"service": "bar"}),
+	)
 
 	srv := grpc.NewServer(grpc.StatsHandler(ssh))
 	imp := newDemoServer()
@@ -85,6 +91,15 @@ func ExampleStatsHandler() {
 	}
 
 	// Output:
+	// example_server_connections
+	// example_server_message_received_size_histogram_bytes
+	// example_server_message_sent_size_histogram_bytes
+	// example_server_messages_received_total
+	// example_server_messages_sent_total
+	// example_server_request_duration_histogram_seconds
+	// example_server_requests_in_flight
+	// example_server_requests_received_total
+	// example_server_responses_sent_total
 	// grpc_client_connections
 	// grpc_client_message_received_size_histogram_bytes
 	// grpc_client_message_sent_size_histogram_bytes
@@ -94,15 +109,6 @@ func ExampleStatsHandler() {
 	// grpc_client_requests_in_flight
 	// grpc_client_requests_sent_total
 	// grpc_client_responses_received_total
-	// grpc_server_connections
-	// grpc_server_message_received_size_histogram_bytes
-	// grpc_server_message_sent_size_histogram_bytes
-	// grpc_server_messages_received_total
-	// grpc_server_messages_sent_total
-	// grpc_server_request_duration_histogram_seconds
-	// grpc_server_requests_in_flight
-	// grpc_server_requests_received_total
-	// grpc_server_responses_sent_total
 }
 
 func BenchmarkUnary_all(b *testing.B) {

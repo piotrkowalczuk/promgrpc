@@ -24,7 +24,6 @@ type ctxKey int
 
 var (
 	tagRPCKey      ctxKey = 1
-	tagRPCIndexKey ctxKey = 2
 	tagConnKey     ctxKey = 3
 )
 

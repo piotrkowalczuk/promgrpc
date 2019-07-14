@@ -2,9 +2,11 @@ package promgrpc
 
 import (
 	"context"
+	"fmt"
+	"strconv"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc/stats"
-	"strconv"
 )
 
 type StatsHandlerCollector interface {
@@ -25,25 +27,41 @@ func NewStatsHandler(handlers ...StatsHandlerCollector) *StatsHandler {
 	}
 }
 
-func ClientStatsHandler() *StatsHandler {
-	return defaultStatsHandler(Client)
+func ClientStatsHandler(opts ...SharedOption) *StatsHandler {
+	return defaultStatsHandler(Client, opts...)
 }
 
-func ServerStatsHandler() *StatsHandler {
-	return defaultStatsHandler(Server)
+func ServerStatsHandler(opts ...SharedOption) *StatsHandler {
+	return defaultStatsHandler(Server, opts...)
 }
 
-func defaultStatsHandler(sub Subsystem) *StatsHandler {
+func defaultStatsHandler(sub Subsystem, opts ...SharedOption) *StatsHandler {
+	var (
+		collectorOpts    []CollectorOption
+		statsHandlerOpts []StatsHandlerOption
+	)
+
+	for _, opt := range opts {
+		switch val := opt.(type) {
+		case StatsHandlerOption:
+			statsHandlerOpts = append(statsHandlerOpts, val)
+		case CollectorOption:
+			collectorOpts = append(collectorOpts, val)
+		default:
+			panic(fmt.Sprintf("shared option does not implement any known type: %T", opt))
+		}
+	}
+
 	return NewStatsHandler(
-		NewConnectionsStatsHandler(sub, NewConnectionsGaugeVec(sub)),
-		NewRequestsTotalStatsHandler(sub, NewRequestsTotalCounterVec(sub)),
-		NewRequestsStatsHandler(sub, NewRequestsGaugeVec(sub)),
-		NewRequestDurationStatsHandler(sub, NewRequestDurationHistogramVec(sub)),
-		NewResponsesTotalStatsHandler(sub, NewResponsesTotalCounterVec(sub)),
-		NewMessagesReceivedTotalStatsHandler(sub, NewMessagesReceivedTotalCounterVec(sub)),
-		NewMessagesSentTotalStatsHandler(sub, NewMessagesSentTotalCounterVec(sub)),
-		NewMessageSentSizeStatsHandler(sub, NewMessageSentSizeHistogramVec(sub)),
-		NewMessageReceivedSizeStatsHandler(sub, NewMessageReceivedSizeHistogramVec(sub)),
+		NewConnectionsStatsHandler(sub, NewConnectionsGaugeVec(sub, collectorOpts...)),
+		NewRequestsTotalStatsHandler(sub, NewRequestsTotalCounterVec(sub, collectorOpts...), statsHandlerOpts...),
+		NewRequestsInFlightStatsHandler(sub, NewRequestsInFlightGaugeVec(sub, collectorOpts...), statsHandlerOpts...),
+		NewRequestDurationStatsHandler(sub, NewRequestDurationHistogramVec(sub, collectorOpts...), statsHandlerOpts...),
+		NewResponsesTotalStatsHandler(sub, NewResponsesTotalCounterVec(sub, collectorOpts...), statsHandlerOpts...),
+		NewMessagesReceivedTotalStatsHandler(sub, NewMessagesReceivedTotalCounterVec(sub, collectorOpts...), statsHandlerOpts...),
+		NewMessagesSentTotalStatsHandler(sub, NewMessagesSentTotalCounterVec(sub, collectorOpts...), statsHandlerOpts...),
+		NewMessageSentSizeStatsHandler(sub, NewMessageSentSizeHistogramVec(sub, collectorOpts...), statsHandlerOpts...),
+		NewMessageReceivedSizeStatsHandler(sub, NewMessageReceivedSizeHistogramVec(sub, collectorOpts...), statsHandlerOpts...),
 	)
 }
 
@@ -100,6 +118,7 @@ func (h *StatsHandler) Collect(in chan<- prometheus.Metric) {
 type baseStatsHandler struct {
 	subsystem Subsystem
 	collector prometheus.Collector
+	options   statsHandlerOptions
 }
 
 // HandleRPC implements stats Handler interface.

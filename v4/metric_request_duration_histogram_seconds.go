@@ -10,14 +10,15 @@ import (
 	"google.golang.org/grpc/stats"
 )
 
-func NewRequestDurationHistogramVec(sub Subsystem) *prometheus.HistogramVec {
+func NewRequestDurationHistogramVec(sub Subsystem, opts ...CollectorOption) *prometheus.HistogramVec {
+	prototype := prometheus.HistogramOpts{
+		Namespace: namespace,
+		Subsystem: strings.ToLower(sub.String()),
+		Name:      "request_duration_histogram_seconds",
+		Help:      "TODO",
+	}
 	return prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Namespace: namespace,
-			Subsystem: strings.ToLower(sub.String()),
-			Name:      "request_duration_histogram_seconds",
-			Help:      "TODO",
-		},
+		applyHistogramOptions(prototype, opts...),
 		[]string{
 			labelClientUserAgent,
 			labelCode,
@@ -28,38 +29,53 @@ func NewRequestDurationHistogramVec(sub Subsystem) *prometheus.HistogramVec {
 	)
 }
 
+// RequestDurationLabels ...
+func RequestDurationLabels(ctx context.Context, stat stats.RPCStats) []string {
+	tag := ctx.Value(tagRPCKey).(rpcTag)
+	return []string{
+		tag.clientUserAgent,
+		status.Code(stat.(*stats.End).Error).String(),
+		tag.isFailFast,
+		tag.method,
+		tag.service,
+	}
+}
+
 type RequestDurationStatsHandler struct {
 	baseStatsHandler
-	vec *prometheus.HistogramVec
+	vec prometheus.ObserverVec
 }
 
 // NewRequestDurationStatsHandler ...
-func NewRequestDurationStatsHandler(sub Subsystem, vec *prometheus.HistogramVec) *RequestDurationStatsHandler {
-	return &RequestDurationStatsHandler{
+func NewRequestDurationStatsHandler(sub Subsystem, vec prometheus.ObserverVec, opts ...StatsHandlerOption) *RequestDurationStatsHandler {
+	h := &RequestDurationStatsHandler{
 		baseStatsHandler: baseStatsHandler{
 			subsystem: sub,
 			collector: vec,
+			options: statsHandlerOptions{
+				rpcLabelFn: RequestDurationLabels,
+			},
 		},
 		vec: vec,
 	}
+	for _, opt := range opts {
+		opt.apply(&h.options)
+	}
+	return h
 }
 
 // HandleRPC processes the RPC stats.
 func (h *RequestDurationStatsHandler) HandleRPC(ctx context.Context, stat stats.RPCStats) {
 	if end, ok := stat.(*stats.End); ok {
-		tag := ctx.Value(tagRPCKey).(rpcTag)
-		lab := []string{
-			tag.clientUserAgent,
-			status.Code(end.Error).String(),
-			tag.isFailFast,
-			tag.method,
-			tag.service,
-		}
 		switch {
 		case stat.IsClient() && h.subsystem == Client:
-			h.vec.WithLabelValues(lab...).Observe(end.EndTime.Sub(end.BeginTime).Seconds())
+			h.vec.
+				WithLabelValues(h.options.rpcLabelFn(ctx, stat)...).
+				Observe(end.EndTime.Sub(end.BeginTime).Seconds())
 		case !stat.IsClient() && h.subsystem == Server:
-			h.vec.WithLabelValues(lab...).Observe(end.EndTime.Sub(end.BeginTime).Seconds())
+			h.vec.
+				WithLabelValues(h.options.rpcLabelFn(ctx, stat)...).
+				Observe(end.EndTime.Sub(end.BeginTime).Seconds())
 		}
 	}
 }

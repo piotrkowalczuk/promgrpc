@@ -8,14 +8,16 @@ import (
 	"google.golang.org/grpc/stats"
 )
 
-func NewConnectionsGaugeVec(sub Subsystem) *prometheus.GaugeVec {
+func NewConnectionsGaugeVec(sub Subsystem, opts ...CollectorOption) *prometheus.GaugeVec {
+	prototype := prometheus.Opts{
+		Namespace: namespace,
+		Subsystem: strings.ToLower(sub.String()),
+		Name:      "connections",
+		Help:      "TODO",
+	}
+
 	return prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Namespace: namespace,
-			Subsystem: strings.ToLower(sub.String()),
-			Name:      "connections",
-			Help:      "TODO",
-		},
+		prometheus.GaugeOpts(applyCollectorOptions(prototype, opts...)),
 		[]string{labelRemoteAddr, labelLocalAddr, labelClientUserAgent},
 	)
 }

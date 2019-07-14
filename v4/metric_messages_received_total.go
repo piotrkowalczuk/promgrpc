@@ -8,14 +8,15 @@ import (
 	"google.golang.org/grpc/stats"
 )
 
-func NewMessagesReceivedTotalCounterVec(sub Subsystem) *prometheus.CounterVec {
+func NewMessagesReceivedTotalCounterVec(sub Subsystem, opts ...CollectorOption) *prometheus.CounterVec {
+	prototype := prometheus.Opts{
+		Namespace: namespace,
+		Subsystem: strings.ToLower(sub.String()),
+		Name:      "messages_received_total",
+		Help:      "TODO",
+	}
 	return prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Namespace: namespace,
-			Subsystem: strings.ToLower(sub.String()),
-			Name:      "messages_received_total",
-			Help:      "TODO",
-		},
+		prometheus.CounterOpts(applyCollectorOptions(prototype, opts...)),
 		[]string{
 			labelClientUserAgent,
 			labelIsFailFast,
@@ -25,6 +26,17 @@ func NewMessagesReceivedTotalCounterVec(sub Subsystem) *prometheus.CounterVec {
 	)
 }
 
+// MessagesReceivedTotalLabels ...
+func MessagesReceivedTotalLabels(ctx context.Context, _ stats.RPCStats) []string {
+	tag := ctx.Value(tagRPCKey).(rpcTag)
+	return []string{
+		tag.clientUserAgent,
+		tag.isFailFast,
+		tag.method,
+		tag.service,
+	}
+}
+
 type MessagesReceivedTotalStatsHandler struct {
 	baseStatsHandler
 	vec *prometheus.CounterVec
@@ -32,36 +44,32 @@ type MessagesReceivedTotalStatsHandler struct {
 
 // NewMessagesReceivedTotalStatsHandler ...
 // The GaugeVec must have zero, one, two, three or four non-const non-curried labels.
-// For those, the only allowed label names are "fail_fast", "handler", "service" and "user_agent".
-func NewMessagesReceivedTotalStatsHandler(sub Subsystem, vec *prometheus.CounterVec) *MessagesReceivedTotalStatsHandler {
-	return &MessagesReceivedTotalStatsHandler{
+// For those, the only allowed labelsFn names are "fail_fast", "handler", "service" and "user_agent".
+func NewMessagesReceivedTotalStatsHandler(sub Subsystem, vec *prometheus.CounterVec, opts ...StatsHandlerOption) *MessagesReceivedTotalStatsHandler {
+	h := &MessagesReceivedTotalStatsHandler{
 		baseStatsHandler: baseStatsHandler{
 			subsystem: sub,
 			collector: vec,
+			options: statsHandlerOptions{
+				rpcLabelFn: MessagesReceivedTotalLabels,
+			},
 		},
 		vec: vec,
 	}
+	for _, opt := range opts {
+		opt.apply(&h.options)
+	}
+	return h
 }
 
 // HandleRPC implements stats Handler interface.
 func (h *MessagesReceivedTotalStatsHandler) HandleRPC(ctx context.Context, stat stats.RPCStats) {
 	if _, ok := stat.(*stats.InPayload); ok {
-		tag := ctx.Value(tagRPCKey).(rpcTag)
-		// labelClientUserAgent,
-		// labelIsFailFast,
-		// labelMethod,
-		// labelService,
-		lab := []string{
-			tag.clientUserAgent,
-			tag.isFailFast,
-			tag.method,
-			tag.service,
-		}
 		switch {
 		case stat.IsClient() && h.subsystem == Client:
-			h.vec.WithLabelValues(lab...).Inc()
+			h.vec.WithLabelValues(h.options.rpcLabelFn(ctx, stat)...).Inc()
 		case !stat.IsClient() && h.subsystem == Server:
-			h.vec.WithLabelValues(lab...).Inc()
+			h.vec.WithLabelValues(h.options.rpcLabelFn(ctx, stat)...).Inc()
 		}
 	}
 }
