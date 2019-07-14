@@ -29,4 +29,27 @@
 //
 // Above all, there is a coordinator.
 // StatsHandler combines multiple stats handlers into a single instance.
+//
+// Metrics
+//
+// The package comes with eighteen predefined metrics — nine for server and nine for client side:
+//
+//  grpc_client_connections
+//  grpc_client_message_received_size_histogram_bytes
+//  grpc_client_message_sent_size_histogram_bytes
+//  grpc_client_messages_received_total
+//  grpc_client_messages_sent_total
+//  grpc_client_request_duration_histogram_seconds
+//  grpc_client_requests_in_flight
+//  grpc_client_requests_sent_total
+//  grpc_client_responses_received_total
+//  grpc_server_connections
+//  grpc_server_message_received_size_histogram_bytes
+//  grpc_server_message_sent_size_histogram_bytes
+//  grpc_server_messages_received_total
+//  grpc_server_messages_sent_total
+//  grpc_server_request_duration_histogram_seconds
+//  grpc_server_requests_in_flight
+//  grpc_server_requests_received_total
+//  grpc_server_responses_sent_total
 package promgrpc
