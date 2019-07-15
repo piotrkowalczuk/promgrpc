@@ -25,7 +25,7 @@
 // It is aware of a collector and knows how to use it to record event occurrences.
 // Each implementation satisfies stats.Handler and prometheus.Collector interface and knows how to monitor a single dimension, e.g. a total number of received/sent requests:
 //
-//  func NewRequestsStatsHandler(Subsystem, *prometheus.GaugeVec, ...StatsHandlerOption) *RequestsStatsHandler {
+//  func NewRequestsStatsHandler(Subsystem, *prometheus.GaugeVec, ...StatsHandlerOption) *RequestsStatsHandler
 //
 // Above all, there is a coordinator.
 // StatsHandler combines multiple stats handlers into a single instance.

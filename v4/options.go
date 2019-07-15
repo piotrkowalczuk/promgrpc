@@ -2,9 +2,10 @@ package promgrpc
 
 import "github.com/prometheus/client_golang/prometheus"
 
-// SharedOption ...
-type SharedOption interface {
-	shared()
+// ShareableOption is a simple wrapper for shareable method.
+// It makes it possible to distinguish options reserved for direct usage, from those that are applicable on a set of objects.
+type ShareableOption interface {
+	shareable()
 }
 
 type statsHandlerOptions struct {
@@ -30,6 +31,7 @@ func newFuncStatsHandlerOption(f func(*statsHandlerOptions)) *funcStatsHandlerOp
 	}
 }
 
+// StatsHandlerWithRPCLabelsFunc allows to inject custom RPCLabelFunc to a stats handler.
 func StatsHandlerWithRPCLabelsFunc(fn RPCLabelFunc) StatsHandlerOption {
 	return newFuncStatsHandlerOption(func(o *statsHandlerOptions) {
 		o.rpcLabelFn = fn
@@ -60,9 +62,9 @@ func newFuncCollectorOption(f func(*collectorOptions)) *funcCollectorOption {
 	}
 }
 
-// SharedCollectorOption ...
+// SharedCollectorOption is CollectorOption extended with shareable capability.
 type SharedCollectorOption interface {
-	SharedOption
+	ShareableOption
 	CollectorOption
 }
 
@@ -70,7 +72,7 @@ type funcSharedCollectorOption struct {
 	funcCollectorOption
 }
 
-func (o *funcSharedCollectorOption) shared() {}
+func (o *funcSharedCollectorOption) shareable() {}
 
 func newFuncSharedCollectorOption(f func(*collectorOptions)) *funcSharedCollectorOption {
 	return &funcSharedCollectorOption{
@@ -78,12 +80,14 @@ func newFuncSharedCollectorOption(f func(*collectorOptions)) *funcSharedCollecto
 	}
 }
 
+// CollectorWithNamespace returns a SharedCollectorOption which sets namespace of a collector.
 func CollectorWithNamespace(namespace string) SharedCollectorOption {
 	return newFuncSharedCollectorOption(func(o *collectorOptions) {
 		o.namespace = namespace
 	})
 }
 
+// CollectorWithConstLabels returns a SharedCollectorOption which adds a set of constant labels to a collector.
 func CollectorWithConstLabels(constLabels prometheus.Labels) SharedCollectorOption {
 	return newFuncSharedCollectorOption(func(o *collectorOptions) {
 		o.constLabels = constLabels

@@ -27,15 +27,15 @@ func NewStatsHandler(handlers ...StatsHandlerCollector) *StatsHandler {
 	}
 }
 
-func ClientStatsHandler(opts ...SharedOption) *StatsHandler {
+func ClientStatsHandler(opts ...ShareableOption) *StatsHandler {
 	return defaultStatsHandler(Client, opts...)
 }
 
-func ServerStatsHandler(opts ...SharedOption) *StatsHandler {
+func ServerStatsHandler(opts ...ShareableOption) *StatsHandler {
 	return defaultStatsHandler(Server, opts...)
 }
 
-func defaultStatsHandler(sub Subsystem, opts ...SharedOption) *StatsHandler {
+func defaultStatsHandler(sub Subsystem, opts ...ShareableOption) *StatsHandler {
 	var (
 		collectorOpts    []CollectorOption
 		statsHandlerOpts []StatsHandlerOption
@@ -48,7 +48,7 @@ func defaultStatsHandler(sub Subsystem, opts ...SharedOption) *StatsHandler {
 		case CollectorOption:
 			collectorOpts = append(collectorOpts, val)
 		default:
-			panic(fmt.Sprintf("shared option does not implement any known type: %T", opt))
+			panic(fmt.Sprintf("shareable option does not implement any known type: %T", opt))
 		}
 	}
 
