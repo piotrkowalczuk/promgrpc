@@ -52,4 +52,20 @@
 //  grpc_server_requests_in_flight
 //  grpc_server_requests_received_total
 //  grpc_server_responses_sent_total
+//
+// Configuration
+//
+// The package does not require any configuration whatsoever but makes it possible.
+// It is beneficial for different reasons.
+//
+// Having all metrics enabled could not be desirable.
+// Some, like histograms, can create significant overhead on the producer side.
+// If performance is critical, it advisable to reduce the set of metrics.
+// To do that, implement a custom version of coordinator constructor, ClientStatsHandler and ServerStatsHandler.
+//
+// Another good reason to change default settings is backward compatibility.
+// Migration of Grafana dashboards is not an easy nor quick task.
+// If the discrepancy is small and, e.g. the only necessary adjustment is changing the namespace, it is achievable by passing CollectorWithNamespace to a collector constructor.
+// It is the same very known pattern from the gRPC package, with some enhancements.
+// What makes it different is that both StatsHandlerOption and CollectorOption have a shareable variant, called ShareableCollectorOption and ShareableSt
 package promgrpc

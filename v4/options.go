@@ -31,6 +31,12 @@ func newFuncStatsHandlerOption(f func(*statsHandlerOptions)) *funcStatsHandlerOp
 	}
 }
 
+// ShareableStatsHandlerOption is StatsHandlerOption extended with shareable capability.
+type ShareableStatsHandlerOption interface {
+	ShareableOption
+	StatsHandlerOption
+}
+
 // StatsHandlerWithRPCLabelsFunc allows to inject custom RPCLabelFunc to a stats handler.
 func StatsHandlerWithRPCLabelsFunc(fn RPCLabelFunc) StatsHandlerOption {
 	return newFuncStatsHandlerOption(func(o *statsHandlerOptions) {
@@ -62,34 +68,34 @@ func newFuncCollectorOption(f func(*collectorOptions)) *funcCollectorOption {
 	}
 }
 
-// SharedCollectorOption is CollectorOption extended with shareable capability.
-type SharedCollectorOption interface {
+// ShareableCollectorOption is CollectorOption extended with shareable capability.
+type ShareableCollectorOption interface {
 	ShareableOption
 	CollectorOption
 }
 
-type funcSharedCollectorOption struct {
+type funcShareableCollectorOption struct {
 	funcCollectorOption
 }
 
-func (o *funcSharedCollectorOption) shareable() {}
+func (o *funcShareableCollectorOption) shareable() {}
 
-func newFuncSharedCollectorOption(f func(*collectorOptions)) *funcSharedCollectorOption {
-	return &funcSharedCollectorOption{
+func newFuncShareableCollectorOption(f func(*collectorOptions)) *funcShareableCollectorOption {
+	return &funcShareableCollectorOption{
 		funcCollectorOption: funcCollectorOption{f: f},
 	}
 }
 
-// CollectorWithNamespace returns a SharedCollectorOption which sets namespace of a collector.
-func CollectorWithNamespace(namespace string) SharedCollectorOption {
-	return newFuncSharedCollectorOption(func(o *collectorOptions) {
+// CollectorWithNamespace returns a ShareableCollectorOption which sets namespace of a collector.
+func CollectorWithNamespace(namespace string) ShareableCollectorOption {
+	return newFuncShareableCollectorOption(func(o *collectorOptions) {
 		o.namespace = namespace
 	})
 }
 
-// CollectorWithConstLabels returns a SharedCollectorOption which adds a set of constant labels to a collector.
-func CollectorWithConstLabels(constLabels prometheus.Labels) SharedCollectorOption {
-	return newFuncSharedCollectorOption(func(o *collectorOptions) {
+// CollectorWithConstLabels returns a ShareableCollectorOption which adds a set of constant labels to a collector.
+func CollectorWithConstLabels(constLabels prometheus.Labels) ShareableCollectorOption {
+	return newFuncShareableCollectorOption(func(o *collectorOptions) {
 		o.constLabels = constLabels
 	})
 }

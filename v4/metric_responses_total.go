@@ -10,6 +10,7 @@ import (
 	"google.golang.org/grpc/stats"
 )
 
+// NewResponsesTotalCounterVec allocates a new Prometheus CounterVec for the given subsystem and set of options.
 func NewResponsesTotalCounterVec(sub Subsystem, opts ...CollectorOption) *prometheus.CounterVec {
 	subsystem := strings.ToLower(sub.String())
 	switch sub {
@@ -36,13 +37,15 @@ func newResponsesTotalCounterVec(sub, name, help string, opts ...CollectorOption
 			// keep alphabetical order
 			labelClientUserAgent,
 			labelCode,
-			labelIsFailFast,
+			labelIsFailFast, // TODO: remove fail fast for server side
 			labelMethod,
 			labelService,
 		},
 	)
 }
 
+// ResponsesTotalStatsHandler is responsible for counting number of incoming (server side) or outgoing (client side) requests.
+// 
 type ResponsesTotalStatsHandler struct {
 	baseStatsHandler
 	vec *prometheus.CounterVec
