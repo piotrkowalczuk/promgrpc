@@ -9,7 +9,7 @@ type ShareableOption interface {
 }
 
 type statsHandlerOptions struct {
-	rpcLabelFn RPCLabelFunc
+	rpcLabelFn HandleRPCLabelFunc
 }
 
 // StatsHandlerOption configures a stats handler behaviour.
@@ -37,8 +37,8 @@ type ShareableStatsHandlerOption interface {
 	StatsHandlerOption
 }
 
-// StatsHandlerWithRPCLabelsFunc allows to inject custom RPCLabelFunc to a stats handler.
-func StatsHandlerWithRPCLabelsFunc(fn RPCLabelFunc) StatsHandlerOption {
+// StatsHandlerWithHandleRPCLabelsFunc allows to inject custom HandleRPCLabelFunc to a stats handler.
+func StatsHandlerWithHandleRPCLabelsFunc(fn HandleRPCLabelFunc) StatsHandlerOption {
 	return newFuncStatsHandlerOption(func(o *statsHandlerOptions) {
 		o.rpcLabelFn = fn
 	})
