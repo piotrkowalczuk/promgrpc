@@ -25,7 +25,7 @@ type StatsHandler struct {
 }
 
 // NewStatsHandler allocates a new coordinator.
-// It allows passing a various number of handlers that later it will iterate through them.
+// It allows passing a various number of handlers that later it will iterate through.
 func NewStatsHandler(handlers ...StatsHandlerCollector) *StatsHandler {
 	return &StatsHandler{
 		handlers: handlers,
