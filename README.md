@@ -11,7 +11,7 @@ Library allows to monitor gRPC based client and server applications.
 | v1.0.2 | glide | interceptors | `^1.0.0` | `~0.8.0` |  |
 | v2.0.2 | modules| interceptors + [stats.Handler](https://godoc.org/google.golang.org/grpc/stats#Handler) | `1.13.0` | `0.8.0` | [![GoDoc](https://godoc.org/github.com/piotrkowalczuk/promgrpc?status.svg)](https://godoc.org/github.com/piotrkowalczuk/promgrpc) |
 | v3.2.2 | modules | interceptors + [stats.Handler](https://godoc.org/google.golang.org/grpc/stats#Handler) | `1.13.0` | `0.8.0` | [![GoDoc](https://godoc.org/github.com/piotrkowalczuk/promgrpc/v3?status.svg)](https://godoc.org/github.com/piotrkowalczuk/promgrpc/v3) |
-| v4.0.0 (in progress) | modules | [stats.Handler](https://godoc.org/google.golang.org/grpc/stats#Handler) | `1.16.0` | `1.0.0` | [![GoDoc](https://godoc.org/github.com/piotrkowalczuk/promgrpc/v4?status.svg)](https://godoc.org/github.com/piotrkowalczuk/promgrpc/v4) |
+| v4.0.0-pre1 | modules | [stats.Handler](https://godoc.org/google.golang.org/grpc/stats#Handler) | `1.16.0` | `1.0.0` | [![GoDoc](https://godoc.org/github.com/piotrkowalczuk/promgrpc/v4?status.svg)](https://godoc.org/github.com/piotrkowalczuk/promgrpc/v4) |
 
 ## Metrics
 
