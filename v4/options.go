@@ -9,7 +9,8 @@ type ShareableOption interface {
 }
 
 type statsHandlerOptions struct {
-	rpcLabelFn HandleRPCLabelFunc
+	handleRPCLabelFn HandleRPCLabelFunc
+	tagRPCLabelFn    TagRPCLabelFunc
 }
 
 // StatsHandlerOption configures a stats handler behaviour.
@@ -38,9 +39,21 @@ type ShareableStatsHandlerOption interface {
 }
 
 // StatsHandlerWithHandleRPCLabelsFunc allows to inject custom HandleRPCLabelFunc to a stats handler.
+// It is not shareable because there little to no chance that all stats handlers need the same set of labels.
 func StatsHandlerWithHandleRPCLabelsFunc(fn HandleRPCLabelFunc) StatsHandlerOption {
 	return newFuncStatsHandlerOption(func(o *statsHandlerOptions) {
-		o.rpcLabelFn = fn
+		o.handleRPCLabelFn = fn
+	})
+}
+
+// StatsHandlerWithTagRPCLabelsFunc allows to inject custom TagRPCLabelFunc to a stats handler.
+// It is not shareable because of performance reasons.
+// If all stats handlers require the same set of additional labels, it is better to implement a custom coordinator
+// (e.g. by embedding StatsHandler) with self-defined TagRPC method.
+// That way, it is guaranteed that new tagging execute only once and default implementation be overridden.
+func StatsHandlerWithTagRPCLabelsFunc(fn TagRPCLabelFunc) StatsHandlerOption {
+	return newFuncStatsHandlerOption(func(o *statsHandlerOptions) {
+		o.tagRPCLabelFn = fn
 	})
 }
 

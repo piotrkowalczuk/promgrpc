@@ -38,7 +38,7 @@ func NewMessageReceivedSizeStatsHandler(sub Subsystem, vec prometheus.ObserverVe
 			subsystem: sub,
 			collector: vec,
 			options: statsHandlerOptions{
-				rpcLabelFn: messageReceivedSizeLabels,
+				handleRPCLabelFn: messageReceivedSizeLabels,
 			},
 		},
 		vec: vec,
@@ -54,9 +54,9 @@ func (h *MessageReceivedSizeStatsHandler) HandleRPC(ctx context.Context, stat st
 	if pay, ok := stat.(*stats.InPayload); ok {
 		switch {
 		case stat.IsClient() && h.subsystem == Client:
-			h.vec.WithLabelValues(h.options.rpcLabelFn(ctx, stat)...).Observe(float64(pay.Length))
+			h.vec.WithLabelValues(h.options.handleRPCLabelFn(ctx, stat)...).Observe(float64(pay.Length))
 		case !stat.IsClient() && h.subsystem == Server:
-			h.vec.WithLabelValues(h.options.rpcLabelFn(ctx, stat)...).Observe(float64(pay.Length))
+			h.vec.WithLabelValues(h.options.handleRPCLabelFn(ctx, stat)...).Observe(float64(pay.Length))
 		}
 	}
 }

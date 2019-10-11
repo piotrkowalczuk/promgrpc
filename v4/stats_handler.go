@@ -132,6 +132,9 @@ type baseStatsHandler struct {
 
 // TagRPC implements stats Handler interface.
 func (h *baseStatsHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) context.Context {
+	if h.options.tagRPCLabelFn != nil {
+		return h.options.tagRPCLabelFn(ctx, info)
+	}
 	return ctx
 }
 

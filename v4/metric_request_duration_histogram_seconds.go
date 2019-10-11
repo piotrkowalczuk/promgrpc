@@ -41,7 +41,7 @@ func NewRequestDurationStatsHandler(sub Subsystem, vec prometheus.ObserverVec, o
 			subsystem: sub,
 			collector: vec,
 			options: statsHandlerOptions{
-				rpcLabelFn: requestDurationLabels,
+				handleRPCLabelFn: requestDurationLabels,
 			},
 		},
 		vec: vec,
@@ -58,11 +58,11 @@ func (h *RequestDurationStatsHandler) HandleRPC(ctx context.Context, stat stats.
 		switch {
 		case stat.IsClient() && h.subsystem == Client:
 			h.vec.
-				WithLabelValues(h.options.rpcLabelFn(ctx, stat)...).
+				WithLabelValues(h.options.handleRPCLabelFn(ctx, stat)...).
 				Observe(end.EndTime.Sub(end.BeginTime).Seconds())
 		case !stat.IsClient() && h.subsystem == Server:
 			h.vec.
-				WithLabelValues(h.options.rpcLabelFn(ctx, stat)...).
+				WithLabelValues(h.options.handleRPCLabelFn(ctx, stat)...).
 				Observe(end.EndTime.Sub(end.BeginTime).Seconds())
 		}
 	}

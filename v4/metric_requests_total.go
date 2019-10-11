@@ -52,7 +52,7 @@ func NewRequestsTotalStatsHandler(sub Subsystem, vec *prometheus.CounterVec, opt
 			subsystem: sub,
 			collector: vec,
 			options: statsHandlerOptions{
-				rpcLabelFn: requestsTotalLabels,
+				handleRPCLabelFn: requestsTotalLabels,
 			},
 		},
 		vec: vec,
@@ -68,9 +68,9 @@ func (h *RequestsTotalStatsHandler) HandleRPC(ctx context.Context, stat stats.RP
 	if beg, ok := stat.(*stats.Begin); ok {
 		switch {
 		case beg.IsClient() && h.subsystem == Client:
-			h.vec.WithLabelValues(h.options.rpcLabelFn(ctx, stat)...).Inc()
+			h.vec.WithLabelValues(h.options.handleRPCLabelFn(ctx, stat)...).Inc()
 		case !beg.IsClient() && h.subsystem == Server:
-			h.vec.WithLabelValues(h.options.rpcLabelFn(ctx, stat)...).Inc()
+			h.vec.WithLabelValues(h.options.handleRPCLabelFn(ctx, stat)...).Inc()
 		}
 	}
 }
