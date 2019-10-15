@@ -152,10 +152,14 @@ func TestRegisterInterceptor(t *testing.T) {
 		},
 	}
 	interceptor1 := promgrpc.NewInterceptor(promgrpc.InterceptorOpts{})
-	promgrpc.RegisterInterceptor(ms, interceptor1)
+	if err := promgrpc.RegisterInterceptor(ms, interceptor1); err != nil {
+		t.Fatal(err)
+	}
 
 	interceptor2 := promgrpc.NewInterceptor(promgrpc.InterceptorOpts{TrackPeers: true})
-	promgrpc.RegisterInterceptor(ms, interceptor2)
+	if err := promgrpc.RegisterInterceptor(ms, interceptor2); err != nil {
+		t.Fatal(err)
+	}
 }
 
 type mockServer map[string]grpc.ServiceInfo
