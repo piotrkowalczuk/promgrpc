@@ -1,7 +1,7 @@
 # promgrpc [![Build Status](https://travis-ci.org/piotrkowalczuk/promgrpc.svg?branch=master)](https://travis-ci.org/piotrkowalczuk/promgrpc)
 
 [![GoDoc](https://godoc.org/github.com/piotrkowalczuk/promgrpc?status.svg)](http://godoc.org/github.com/piotrkowalczuk/promgrpc)
-[![GolangCI](https://golangci.com/badges/github.com/piotrkowalczuk/promgrpc.svg)](https://golangci.com)
+[![GolangCI](https://golangci.com/badges/github.com/piotrkowalczuk/promgrpc.svg)](https://golangci.com/r/github.com/piotrkowalczuk/promgrpc)
 
 Library allows to monitor gRPC based client and server applications.
 
