@@ -92,8 +92,7 @@ func TestInterceptor_StreamClient(t *testing.T) {
 }
 
 func TestInterceptor_HandleConn(t *testing.T) {
-	var handler stats.Handler
-	handler = promgrpc.NewInterceptor(promgrpc.InterceptorOpts{})
+	handler := promgrpc.NewInterceptor(promgrpc.InterceptorOpts{})
 
 	ctxClient := handler.TagConn(context.Background(), &stats.ConnTagInfo{
 		LocalAddr:  &net.TCPAddr{},
@@ -111,8 +110,7 @@ func TestInterceptor_HandleConn(t *testing.T) {
 }
 
 func TestInterceptor_HandleRPC(t *testing.T) {
-	var handler stats.Handler
-	handler = promgrpc.NewInterceptor(promgrpc.InterceptorOpts{})
+	handler := promgrpc.NewInterceptor(promgrpc.InterceptorOpts{})
 
 	ctxClient := handler.TagRPC(context.Background(), &stats.RPCTagInfo{
 		FullMethodName: "method",
@@ -152,10 +150,14 @@ func TestRegisterInterceptor(t *testing.T) {
 		},
 	}
 	interceptor1 := promgrpc.NewInterceptor(promgrpc.InterceptorOpts{})
-	promgrpc.RegisterInterceptor(ms, interceptor1)
+	if err := promgrpc.RegisterInterceptor(ms, interceptor1); err != nil {
+		t.Fatal(err)
+	}
 
 	interceptor2 := promgrpc.NewInterceptor(promgrpc.InterceptorOpts{TrackPeers: true})
-	promgrpc.RegisterInterceptor(ms, interceptor2)
+	if err := promgrpc.RegisterInterceptor(ms, interceptor2); err != nil {
+		t.Fatal(err)
+	}
 }
 
 type mockServer map[string]grpc.ServiceInfo

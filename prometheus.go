@@ -1,6 +1,7 @@
 package promgrpc
 
 import (
+	"google.golang.org/grpc/status"
 	"net"
 	"strconv"
 	"strings"
@@ -112,7 +113,7 @@ func (i *Interceptor) UnaryClient() grpc.UnaryClientInterceptor {
 		start := time.Now()
 
 		err := invoker(ctx, method, req, reply, cc, opts...)
-		code := grpc.Code(err)
+		code := status.Code(err)
 		service, method := split(method)
 		labels := prometheus.Labels{
 			"service": service,
@@ -139,7 +140,7 @@ func (i *Interceptor) StreamClient() grpc.StreamClientInterceptor {
 		start := time.Now()
 
 		client, err := streamer(ctx, desc, cc, method, opts...)
-		code := grpc.Code(err)
+		code := status.Code(err)
 		service, method := split(method)
 		labels := prometheus.Labels{
 			"service": service,
@@ -169,7 +170,7 @@ func (i *Interceptor) UnaryServer() grpc.UnaryServerInterceptor {
 		start := time.Now()
 
 		res, err := handler(ctx, req)
-		code := grpc.Code(err)
+		code := status.Code(err)
 		service, method := split(info.FullMethod)
 
 		labels := prometheus.Labels{

@@ -38,7 +38,7 @@ func NewRequestsInFlightStatsHandler(sub Subsystem, vec *prometheus.GaugeVec, op
 			subsystem: sub,
 			collector: vec,
 			options: statsHandlerOptions{
-				rpcLabelFn: requestsInFlightLabels,
+				handleRPCLabelFn: requestsInFlightLabels,
 			},
 		},
 		vec: vec,
@@ -55,16 +55,16 @@ func (h *RequestsInFlightStatsHandler) HandleRPC(ctx context.Context, stat stats
 	case *stats.Begin:
 		switch {
 		case stat.IsClient() && h.subsystem == Client:
-			h.vec.WithLabelValues(h.options.rpcLabelFn(ctx, stat)...).Inc()
+			h.vec.WithLabelValues(h.options.handleRPCLabelFn(ctx, stat)...).Inc()
 		case !stat.IsClient() && h.subsystem == Server:
-			h.vec.WithLabelValues(h.options.rpcLabelFn(ctx, stat)...).Inc()
+			h.vec.WithLabelValues(h.options.handleRPCLabelFn(ctx, stat)...).Inc()
 		}
 	case *stats.End:
 		switch {
 		case stat.IsClient() && h.subsystem == Client:
-			h.vec.WithLabelValues(h.options.rpcLabelFn(ctx, stat)...).Dec()
+			h.vec.WithLabelValues(h.options.handleRPCLabelFn(ctx, stat)...).Dec()
 		case !stat.IsClient() && h.subsystem == Server:
-			h.vec.WithLabelValues(h.options.rpcLabelFn(ctx, stat)...).Dec()
+			h.vec.WithLabelValues(h.options.handleRPCLabelFn(ctx, stat)...).Dec()
 		}
 	}
 }
