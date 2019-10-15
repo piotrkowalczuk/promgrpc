@@ -92,8 +92,7 @@ func TestInterceptor_StreamClient(t *testing.T) {
 }
 
 func TestInterceptor_HandleConn(t *testing.T) {
-	var handler stats.Handler
-	handler = promgrpc.NewInterceptor(promgrpc.InterceptorOpts{})
+	handler := promgrpc.NewInterceptor(promgrpc.InterceptorOpts{})
 
 	ctxClient := handler.TagConn(context.Background(), &stats.ConnTagInfo{
 		LocalAddr:  &net.TCPAddr{},
@@ -111,8 +110,7 @@ func TestInterceptor_HandleConn(t *testing.T) {
 }
 
 func TestInterceptor_HandleRPC(t *testing.T) {
-	var handler stats.Handler
-	handler = promgrpc.NewInterceptor(promgrpc.InterceptorOpts{})
+	handler := promgrpc.NewInterceptor(promgrpc.InterceptorOpts{})
 
 	ctxClient := handler.TagRPC(context.Background(), &stats.RPCTagInfo{
 		FullMethodName: "method",
