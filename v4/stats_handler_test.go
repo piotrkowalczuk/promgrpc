@@ -15,6 +15,8 @@ import (
 )
 
 func TestStatsHandler(t *testing.T) {
+	t.Parallel()
+
 	rpc, reg, teardown := suite(t)
 	defer teardown(t)
 
