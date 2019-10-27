@@ -39,7 +39,12 @@ func suite(t *testing.T) (test.TestServiceClient, *prometheus.Registry, func(*te
 		}
 	}()
 
-	con, err := grpc.DialContext(ctx, lis.Addr().String(), grpc.WithInsecure(), grpc.WithBlock(), grpc.WithStatsHandler(csh))
+	con, err := grpc.DialContext(ctx, lis.Addr().String(),
+		grpc.WithInsecure(),
+		grpc.WithBlock(),
+		grpc.WithStatsHandler(csh),
+		grpc.WithUserAgent("test"),
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
