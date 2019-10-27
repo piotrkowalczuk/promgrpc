@@ -27,9 +27,8 @@ func NewServerMessageReceivedSizeStatsHandler(vec prometheus.ObserverVec, opts .
 		},
 		vec: vec,
 	}
-	for _, opt := range opts {
-		opt.apply(&h.options)
-	}
+	h.applyOpts(opts...)
+
 	return h
 }
 

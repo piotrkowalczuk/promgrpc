@@ -158,6 +158,12 @@ func (h *baseStatsHandler) Collect(in chan<- prometheus.Metric) {
 	h.collector.Collect(in)
 }
 
+func (h *baseStatsHandler) applyOpts(opts ...StatsHandlerOption) {
+	for _, opt := range opts {
+		opt.apply(&h.options)
+	}
+}
+
 func optionsSplit(opts ...ShareableOption) ([]CollectorOption, []StatsHandlerOption) {
 	var (
 		collectorOpts    []CollectorOption

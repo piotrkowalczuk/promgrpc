@@ -29,9 +29,8 @@ func NewClientResponsesTotalStatsHandler(vec *prometheus.CounterVec, opts ...Sta
 		},
 		vec: vec,
 	}
-	for _, opt := range opts {
-		opt.apply(&h.options)
-	}
+	h.applyOpts(opts...)
+
 	return h
 }
 
