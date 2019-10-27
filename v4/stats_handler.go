@@ -34,41 +34,35 @@ func NewStatsHandler(handlers ...StatsHandlerCollector) *StatsHandler {
 
 // ClientStatsHandler instantiates a default client-side coordinator together with every metric specific stats handler provided by this package.
 func ClientStatsHandler(opts ...ShareableOption) *StatsHandler {
-	return defaultStatsHandler(Client, opts...)
+	collectorOpts, statsHandlerOpts := optionsSplit(opts...)
+
+	return NewStatsHandler(
+		NewClientConnectionsStatsHandler(NewClientConnectionsGaugeVec(collectorOpts...)),
+		NewClientRequestsTotalStatsHandler(NewClientRequestsTotalCounterVec(collectorOpts...), statsHandlerOpts...),
+		NewClientRequestsInFlightStatsHandler(NewClientRequestsInFlightGaugeVec(collectorOpts...), statsHandlerOpts...),
+		NewClientRequestDurationStatsHandler(NewClientRequestDurationHistogramVec(collectorOpts...), statsHandlerOpts...),
+		NewClientResponsesTotalStatsHandler(NewClientResponsesTotalCounterVec(collectorOpts...), statsHandlerOpts...),
+		NewClientMessagesReceivedTotalStatsHandler(NewClientMessagesReceivedTotalCounterVec(collectorOpts...), statsHandlerOpts...),
+		NewClientMessagesSentTotalStatsHandler(NewClientMessagesSentTotalCounterVec(collectorOpts...), statsHandlerOpts...),
+		NewClientMessageSentSizeStatsHandler(NewClientMessageSentSizeHistogramVec(collectorOpts...), statsHandlerOpts...),
+		NewClientMessageReceivedSizeStatsHandler(NewClientMessageReceivedSizeHistogramVec(collectorOpts...), statsHandlerOpts...),
+	)
 }
 
 // ClientStatsHandler instantiates a default server-side coordinator together with every metric specific stats handler provided by this package.
 func ServerStatsHandler(opts ...ShareableOption) *StatsHandler {
-	return defaultStatsHandler(Server, opts...)
-}
-
-func defaultStatsHandler(sub Subsystem, opts ...ShareableOption) *StatsHandler {
-	var (
-		collectorOpts    []CollectorOption
-		statsHandlerOpts []StatsHandlerOption
-	)
-
-	for _, opt := range opts {
-		switch val := opt.(type) {
-		case StatsHandlerOption:
-			statsHandlerOpts = append(statsHandlerOpts, val)
-		case CollectorOption:
-			collectorOpts = append(collectorOpts, val)
-		default:
-			panic(fmt.Sprintf("shareable option does not implement any known type: %T", opt))
-		}
-	}
+	collectorOpts, statsHandlerOpts := optionsSplit(opts...)
 
 	return NewStatsHandler(
-		NewConnectionsStatsHandler(sub, NewConnectionsGaugeVec(sub, collectorOpts...)),
-		NewRequestsTotalStatsHandler(sub, NewRequestsTotalCounterVec(sub, collectorOpts...), statsHandlerOpts...),
-		NewRequestsInFlightStatsHandler(sub, NewRequestsInFlightGaugeVec(sub, collectorOpts...), statsHandlerOpts...),
-		NewRequestDurationStatsHandler(sub, NewRequestDurationHistogramVec(sub, collectorOpts...), statsHandlerOpts...),
-		NewResponsesTotalStatsHandler(sub, NewResponsesTotalCounterVec(sub, collectorOpts...), statsHandlerOpts...),
-		NewMessagesReceivedTotalStatsHandler(sub, NewMessagesReceivedTotalCounterVec(sub, collectorOpts...), statsHandlerOpts...),
-		NewMessagesSentTotalStatsHandler(sub, NewMessagesSentTotalCounterVec(sub, collectorOpts...), statsHandlerOpts...),
-		NewMessageSentSizeStatsHandler(sub, NewMessageSentSizeHistogramVec(sub, collectorOpts...), statsHandlerOpts...),
-		NewMessageReceivedSizeStatsHandler(sub, NewMessageReceivedSizeHistogramVec(sub, collectorOpts...), statsHandlerOpts...),
+		NewServerConnectionsStatsHandler(NewServerConnectionsGaugeVec(collectorOpts...)),
+		NewServerRequestsTotalStatsHandler(NewServerRequestsTotalCounterVec(collectorOpts...), statsHandlerOpts...),
+		NewServerRequestsInFlightStatsHandler(NewServerRequestsInFlightGaugeVec(collectorOpts...), statsHandlerOpts...),
+		NewServerRequestDurationStatsHandler(NewServerRequestDurationHistogramVec(collectorOpts...), statsHandlerOpts...),
+		NewServerResponsesTotalStatsHandler(NewServerResponsesTotalCounterVec(collectorOpts...), statsHandlerOpts...),
+		NewServerMessagesReceivedTotalStatsHandler(NewServerMessagesReceivedTotalCounterVec(collectorOpts...), statsHandlerOpts...),
+		NewServerMessagesSentTotalStatsHandler(NewServerMessagesSentTotalCounterVec(collectorOpts...), statsHandlerOpts...),
+		NewServerMessageSentSizeStatsHandler(NewServerMessageSentSizeHistogramVec(collectorOpts...), statsHandlerOpts...),
+		NewServerMessageReceivedSizeStatsHandler(NewServerMessageReceivedSizeHistogramVec(collectorOpts...), statsHandlerOpts...),
 	)
 }
 
@@ -125,7 +119,6 @@ func (h *StatsHandler) Collect(in chan<- prometheus.Metric) {
 }
 
 type baseStatsHandler struct {
-	subsystem Subsystem
 	collector prometheus.Collector
 	options   statsHandlerOptions
 }
@@ -163,4 +156,24 @@ func (h *baseStatsHandler) Describe(in chan<- *prometheus.Desc) {
 // Collect implements prometheus Collector interface.
 func (h *baseStatsHandler) Collect(in chan<- prometheus.Metric) {
 	h.collector.Collect(in)
+}
+
+func optionsSplit(opts ...ShareableOption) ([]CollectorOption, []StatsHandlerOption) {
+	var (
+		collectorOpts    []CollectorOption
+		statsHandlerOpts []StatsHandlerOption
+	)
+
+	for _, opt := range opts {
+		switch val := opt.(type) {
+		case StatsHandlerOption:
+			statsHandlerOpts = append(statsHandlerOpts, val)
+		case CollectorOption:
+			collectorOpts = append(collectorOpts, val)
+		default:
+			panic(fmt.Sprintf("shareable option does not implement any known type: %T", opt))
+		}
+	}
+
+	return collectorOpts, statsHandlerOpts
 }
