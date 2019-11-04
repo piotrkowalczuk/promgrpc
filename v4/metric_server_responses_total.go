@@ -11,7 +11,14 @@ import (
 
 // NewServerResponsesTotalCounterVec allocates a new Prometheus CounterVec for the server and given set of options.
 func NewServerResponsesTotalCounterVec(opts ...CollectorOption) *prometheus.CounterVec {
-	return newResponsesTotalCounterVec("server", "responses_sent_total", "TODO", opts...)
+	labels := []string{
+		// keep alphabetical order
+		labelClientUserAgent,
+		labelCode,
+		labelMethod,
+		labelService,
+	}
+	return newResponsesTotalCounterVec("server", "responses_sent_total", "TODO", labels, opts...)
 }
 
 // ServerResponsesTotalStatsHandler is responsible for counting number of incoming (server side) or outgoing (client side) requests.
@@ -26,7 +33,7 @@ func NewServerResponsesTotalStatsHandler(vec *prometheus.CounterVec, opts ...Sta
 		baseStatsHandler: baseStatsHandler{
 			collector: vec,
 			options: statsHandlerOptions{
-				handleRPCLabelFn: responsesTotalLabels,
+				handleRPCLabelFn: serverResponsesTotalLabels,
 			},
 		},
 		vec: vec,
@@ -46,12 +53,11 @@ func (h *ServerResponsesTotalStatsHandler) HandleRPC(ctx context.Context, stat s
 	}
 }
 
-func responsesTotalLabels(ctx context.Context, stat stats.RPCStats) []string {
+func serverResponsesTotalLabels(ctx context.Context, stat stats.RPCStats) []string {
 	tag := ctx.Value(tagRPCKey).(rpcTag)
 	return []string{
 		tag.clientUserAgent,
 		status.Code(stat.(*stats.End).Error).String(),
-		tag.isFailFast,
 		tag.method,
 		tag.service,
 	}

@@ -6,7 +6,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func newConnectionsGaugeVec(sub string, opts ...CollectorOption) *prometheus.GaugeVec {
+func newConnectionsGaugeVec(sub string, labels []string, opts ...CollectorOption) *prometheus.GaugeVec {
 	prototype := prometheus.Opts{
 		Namespace: namespace,
 		Subsystem: strings.ToLower(sub),
@@ -15,12 +15,11 @@ func newConnectionsGaugeVec(sub string, opts ...CollectorOption) *prometheus.Gau
 	}
 
 	return prometheus.NewGaugeVec(
-		prometheus.GaugeOpts(applyCollectorOptions(prototype, opts...)),
-		[]string{labelRemoteAddr, labelLocalAddr, labelClientUserAgent},
+		prometheus.GaugeOpts(applyCollectorOptions(prototype, opts...)), labels,
 	)
 }
 
-func newMessageReceivedSizeHistogramVec(sub string, opts ...CollectorOption) *prometheus.HistogramVec {
+func newMessageReceivedSizeHistogramVec(sub string, labels []string, opts ...CollectorOption) *prometheus.HistogramVec {
 	prototype := prometheus.HistogramOpts{
 		Namespace: namespace,
 		Subsystem: strings.ToLower(sub),
@@ -28,17 +27,11 @@ func newMessageReceivedSizeHistogramVec(sub string, opts ...CollectorOption) *pr
 		Help:      "TODO",
 	}
 	return prometheus.NewHistogramVec(
-		applyHistogramOptions(prototype, opts...),
-		[]string{
-			labelClientUserAgent,
-			labelIsFailFast,
-			labelMethod,
-			labelService,
-		},
+		applyHistogramOptions(prototype, opts...), labels,
 	)
 }
 
-func newMessageSentSizeHistogramVec(sub string, opts ...CollectorOption) *prometheus.HistogramVec {
+func newMessageSentSizeHistogramVec(sub string, labels []string, opts ...CollectorOption) *prometheus.HistogramVec {
 	prototype := prometheus.HistogramOpts{
 		Namespace: namespace,
 		Subsystem: strings.ToLower(sub),
@@ -46,35 +39,21 @@ func newMessageSentSizeHistogramVec(sub string, opts ...CollectorOption) *promet
 		Help:      "TODO",
 	}
 	return prometheus.NewHistogramVec(
-		applyHistogramOptions(prototype, opts...),
-		[]string{
-			labelClientUserAgent,
-			labelIsFailFast,
-			labelMethod,
-			labelService,
-		},
+		applyHistogramOptions(prototype, opts...), labels,
 	)
 }
 
-func newMessagesReceivedTotalCounterVec(sub string, opts ...CollectorOption) *prometheus.CounterVec {
+func newMessagesReceivedTotalCounterVec(sub string, labels []string, opts ...CollectorOption) *prometheus.CounterVec {
 	prototype := prometheus.Opts{
 		Namespace: namespace,
 		Subsystem: strings.ToLower(sub),
 		Name:      "messages_received_total",
 		Help:      "TODO",
 	}
-	return prometheus.NewCounterVec(
-		prometheus.CounterOpts(applyCollectorOptions(prototype, opts...)),
-		[]string{
-			labelClientUserAgent,
-			labelIsFailFast,
-			labelMethod,
-			labelService,
-		},
-	)
+	return prometheus.NewCounterVec(prometheus.CounterOpts(applyCollectorOptions(prototype, opts...)), labels)
 }
 
-func newMessagesSentTotalCounterVec(sub string, opts ...CollectorOption) *prometheus.CounterVec {
+func newMessagesSentTotalCounterVec(sub string, labels []string, opts ...CollectorOption) *prometheus.CounterVec {
 	prototype := prometheus.Opts{
 		Namespace: namespace,
 		Subsystem: strings.ToLower(sub),
@@ -83,16 +62,11 @@ func newMessagesSentTotalCounterVec(sub string, opts ...CollectorOption) *promet
 	}
 	return prometheus.NewCounterVec(
 		prometheus.CounterOpts(applyCollectorOptions(prototype, opts...)),
-		[]string{
-			labelClientUserAgent,
-			labelIsFailFast,
-			labelMethod,
-			labelService,
-		},
+		labels,
 	)
 }
 
-func newRequestDurationHistogramVec(sub string, opts ...CollectorOption) *prometheus.HistogramVec {
+func newRequestDurationHistogramVec(sub string, labels []string, opts ...CollectorOption) *prometheus.HistogramVec {
 	prototype := prometheus.HistogramOpts{
 		Namespace: namespace,
 		Subsystem: strings.ToLower(sub),
@@ -101,17 +75,11 @@ func newRequestDurationHistogramVec(sub string, opts ...CollectorOption) *promet
 	}
 	return prometheus.NewHistogramVec(
 		applyHistogramOptions(prototype, opts...),
-		[]string{
-			labelClientUserAgent,
-			labelCode,
-			labelIsFailFast,
-			labelMethod,
-			labelService,
-		},
+		labels,
 	)
 }
 
-func newRequestsInFlightGaugeVec(sub string, opts ...CollectorOption) *prometheus.GaugeVec {
+func newRequestsInFlightGaugeVec(sub string, labels []string, opts ...CollectorOption) *prometheus.GaugeVec {
 	prototype := prometheus.Opts{
 		Namespace: namespace,
 		Subsystem: strings.ToLower(sub),
@@ -119,17 +87,23 @@ func newRequestsInFlightGaugeVec(sub string, opts ...CollectorOption) *prometheu
 		Help:      "TODO",
 	}
 	return prometheus.NewGaugeVec(
-		prometheus.GaugeOpts(applyCollectorOptions(prototype, opts...)),
-		[]string{
-			// keep alphabetical order
-			labelIsFailFast,
-			labelMethod,
-			labelService,
-		},
+		prometheus.GaugeOpts(applyCollectorOptions(prototype, opts...)), labels,
 	)
 }
 
-func newRequestsTotalCounterVec(sub, name, help string, opts ...CollectorOption) *prometheus.CounterVec {
+func newRequestsTotalCounterVec(sub, name, help string, labels []string, opts ...CollectorOption) *prometheus.CounterVec {
+	prototype := prometheus.Opts{
+		Namespace: namespace,
+		Subsystem: sub,
+		Name:      name,
+		Help:      help,
+	}
+	return prometheus.NewCounterVec(
+		prometheus.CounterOpts(applyCollectorOptions(prototype, opts...)), labels,
+	)
+}
+
+func newResponsesTotalCounterVec(sub, name, help string, labels []string, opts ...CollectorOption) *prometheus.CounterVec {
 	prototype := prometheus.Opts{
 		Namespace: namespace,
 		Subsystem: sub,
@@ -138,30 +112,6 @@ func newRequestsTotalCounterVec(sub, name, help string, opts ...CollectorOption)
 	}
 	return prometheus.NewCounterVec(
 		prometheus.CounterOpts(applyCollectorOptions(prototype, opts...)),
-		[]string{
-			labelIsFailFast,
-			labelMethod,
-			labelService,
-		},
-	)
-}
-
-func newResponsesTotalCounterVec(sub, name, help string, opts ...CollectorOption) *prometheus.CounterVec {
-	prototype := prometheus.Opts{
-		Namespace: namespace,
-		Subsystem: sub,
-		Name:      name,
-		Help:      help,
-	}
-	return prometheus.NewCounterVec(
-		prometheus.CounterOpts(applyCollectorOptions(prototype, opts...)),
-		[]string{
-			// keep alphabetical order
-			labelClientUserAgent,
-			labelCode,
-			labelIsFailFast, // TODO: remove fail fast for server side
-			labelMethod,
-			labelService,
-		},
+		labels,
 	)
 }

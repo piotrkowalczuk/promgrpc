@@ -13,6 +13,12 @@ type rpcTag struct {
 	clientUserAgent string
 }
 
+type connTag struct {
+	labelRemoteAddr      string
+	labelLocalAddr       string
+	labelClientUserAgent string
+}
+
 // HandleRPCLabelFunc type represents a function signature that can be passed into a stats handler and used instead of default one.
 // That way caller gets the ability to modify the way labels are assembled.
 type HandleRPCLabelFunc func(context.Context, stats.RPCStats) []string

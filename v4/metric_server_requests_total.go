@@ -8,7 +8,11 @@ import (
 )
 
 func NewServerRequestsTotalCounterVec(opts ...CollectorOption) *prometheus.CounterVec {
-	return newRequestsTotalCounterVec("server", "requests_received_total", "TODO", opts...)
+	labels := []string{
+		labelMethod,
+		labelService,
+	}
+	return newRequestsTotalCounterVec("server", "requests_received_total", "TODO", labels, opts...)
 }
 
 type ServerRequestsTotalStatsHandler struct {
@@ -24,7 +28,7 @@ func NewServerRequestsTotalStatsHandler(vec *prometheus.CounterVec, opts ...Stat
 		baseStatsHandler: baseStatsHandler{
 			collector: vec,
 			options: statsHandlerOptions{
-				handleRPCLabelFn: requestsTotalLabels,
+				handleRPCLabelFn: serverRequestsTotalLabels,
 			},
 		},
 		vec: vec,
@@ -44,10 +48,9 @@ func (h *ServerRequestsTotalStatsHandler) HandleRPC(ctx context.Context, stat st
 	}
 }
 
-func requestsTotalLabels(ctx context.Context, _ stats.RPCStats) []string {
+func serverRequestsTotalLabels(ctx context.Context, _ stats.RPCStats) []string {
 	tag := ctx.Value(tagRPCKey).(rpcTag)
 	return []string{
-		tag.isFailFast,
 		tag.method,
 		tag.service,
 	}
