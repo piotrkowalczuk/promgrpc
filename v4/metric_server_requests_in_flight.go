@@ -8,7 +8,12 @@ import (
 )
 
 func NewServerRequestsInFlightGaugeVec(opts ...CollectorOption) *prometheus.GaugeVec {
-	return newRequestsInFlightGaugeVec("server", opts...)
+	labels := []string{
+		// keep alphabetical order
+		labelMethod,
+		labelService,
+	}
+	return newRequestsInFlightGaugeVec("server", labels, opts...)
 }
 
 type ServerRequestsInFlightStatsHandler struct {
@@ -22,7 +27,7 @@ func NewServerRequestsInFlightStatsHandler(vec *prometheus.GaugeVec, opts ...Sta
 		baseStatsHandler: baseStatsHandler{
 			collector: vec,
 			options: statsHandlerOptions{
-				handleRPCLabelFn: requestsInFlightLabels,
+				handleRPCLabelFn: serverRequestsInFlightLabels,
 			},
 		},
 		vec: vec,
@@ -48,11 +53,10 @@ func (h *ServerRequestsInFlightStatsHandler) HandleRPC(ctx context.Context, stat
 	}
 }
 
-func requestsInFlightLabels(ctx context.Context, _ stats.RPCStats) []string {
+func serverRequestsInFlightLabels(ctx context.Context, _ stats.RPCStats) []string {
 	tag := ctx.Value(tagRPCKey).(rpcTag)
 	// keep alphabetical order
 	return []string{
-		tag.isFailFast,
 		tag.method,
 		tag.service,
 	}

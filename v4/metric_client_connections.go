@@ -8,7 +8,8 @@ import (
 )
 
 func NewClientConnectionsGaugeVec(opts ...CollectorOption) *prometheus.GaugeVec {
-	return newConnectionsGaugeVec("client", opts...)
+	labels := []string{labelRemoteAddr, labelLocalAddr}
+	return newConnectionsGaugeVec("client", labels, opts...)
 }
 
 type ClientConnectionsStatsHandler struct {
@@ -32,16 +33,20 @@ func (h *ClientConnectionsStatsHandler) HandleConn(ctx context.Context, stat sta
 	case *stats.ConnBegin:
 		switch {
 		case stat.IsClient():
-			h.vec.With(h.labels(ctx)).Inc()
+			h.vec.WithLabelValues(h.labels(ctx)...).Inc()
 		}
 	case *stats.ConnEnd:
 		switch {
 		case stat.IsClient():
-			h.vec.With(h.labels(ctx)).Dec()
+			h.vec.WithLabelValues(h.labels(ctx)...).Dec()
 		}
 	}
 }
 
-func (h *ClientConnectionsStatsHandler) labels(ctx context.Context) prometheus.Labels {
-	return ctx.Value(tagConnKey).(prometheus.Labels)
+func (h *ClientConnectionsStatsHandler) labels(ctx context.Context) []string {
+	tag := ctx.Value(tagConnKey).(connTag)
+	return []string{
+		tag.labelLocalAddr,
+		tag.labelRemoteAddr,
+	}
 }

@@ -71,9 +71,10 @@ func (h *StatsHandler) TagRPC(ctx context.Context, inf *stats.RPCTagInfo) contex
 	service, method := split(inf.FullMethodName)
 
 	ctx = context.WithValue(ctx, tagRPCKey, rpcTag{
-		isFailFast: strconv.FormatBool(inf.FailFast),
-		service:    service,
-		method:     method,
+		isFailFast:      strconv.FormatBool(inf.FailFast),
+		service:         service,
+		method:          method,
+		clientUserAgent: userAgent(ctx),
 	})
 
 	for _, c := range h.handlers {
@@ -133,7 +134,7 @@ func (h *baseStatsHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) c
 
 // TagConn implements stats Handler interface.
 func (h *baseStatsHandler) TagConn(ctx context.Context, info *stats.ConnTagInfo) context.Context {
-	return context.WithValue(ctx, tagConnKey, prometheus.Labels{
+	return context.WithValue(ctx, tagConnKey, connTag{
 		labelRemoteAddr:      info.RemoteAddr.String(),
 		labelLocalAddr:       info.LocalAddr.String(),
 		labelClientUserAgent: userAgent(ctx),

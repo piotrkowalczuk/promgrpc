@@ -10,7 +10,14 @@ import (
 )
 
 func NewServerRequestDurationHistogramVec(opts ...CollectorOption) *prometheus.HistogramVec {
-	return newRequestDurationHistogramVec("server", opts...)
+	labels := []string{
+		labelClientUserAgent,
+		labelCode,
+		labelMethod,
+		labelService,
+	}
+
+	return newRequestDurationHistogramVec("server", labels, opts...)
 }
 
 type ServerRequestDurationStatsHandler struct {
@@ -24,7 +31,7 @@ func NewServerRequestDurationStatsHandler(vec prometheus.ObserverVec, opts ...St
 		baseStatsHandler: baseStatsHandler{
 			collector: vec,
 			options: statsHandlerOptions{
-				handleRPCLabelFn: requestDurationLabels,
+				handleRPCLabelFn: serverRequestDurationLabels,
 			},
 		},
 		vec: vec,
@@ -46,12 +53,11 @@ func (h *ServerRequestDurationStatsHandler) HandleRPC(ctx context.Context, stat 
 	}
 }
 
-func requestDurationLabels(ctx context.Context, stat stats.RPCStats) []string {
+func serverRequestDurationLabels(ctx context.Context, stat stats.RPCStats) []string {
 	tag := ctx.Value(tagRPCKey).(rpcTag)
 	return []string{
 		tag.clientUserAgent,
 		status.Code(stat.(*stats.End).Error).String(),
-		tag.isFailFast,
 		tag.method,
 		tag.service,
 	}

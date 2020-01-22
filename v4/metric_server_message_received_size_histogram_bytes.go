@@ -8,7 +8,12 @@ import (
 )
 
 func NewServerMessageReceivedSizeHistogramVec(opts ...CollectorOption) *prometheus.HistogramVec {
-	return newMessageReceivedSizeHistogramVec("server", opts...)
+	labels := []string{
+		labelClientUserAgent,
+		labelMethod,
+		labelService,
+	}
+	return newMessageReceivedSizeHistogramVec("server", labels, opts...)
 }
 
 type ServerMessageReceivedSizeStatsHandler struct {
@@ -22,7 +27,7 @@ func NewServerMessageReceivedSizeStatsHandler(vec prometheus.ObserverVec, opts .
 		baseStatsHandler: baseStatsHandler{
 			collector: vec,
 			options: statsHandlerOptions{
-				handleRPCLabelFn: messageReceivedSizeLabels,
+				handleRPCLabelFn: serverMessageReceivedSizeLabels,
 			},
 		},
 		vec: vec,
@@ -42,11 +47,10 @@ func (h *ServerMessageReceivedSizeStatsHandler) HandleRPC(ctx context.Context, s
 	}
 }
 
-func messageReceivedSizeLabels(ctx context.Context, _ stats.RPCStats) []string {
+func serverMessageReceivedSizeLabels(ctx context.Context, _ stats.RPCStats) []string {
 	tag := ctx.Value(tagRPCKey).(rpcTag)
 	return []string{
 		tag.clientUserAgent,
-		tag.isFailFast,
 		tag.method,
 		tag.service,
 	}
