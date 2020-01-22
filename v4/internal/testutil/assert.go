@@ -42,7 +42,6 @@ func AssertMetricValue(t *testing.T, g prometheus.Gatherer, n string, exp float6
 				t.Errorf("metric %s value do not match, expected %g but got %g", n, exp, got)
 				return
 			} else {
-				//t.Logf("metric %s has expected value %g", n, exp)
 				return
 			}
 		}
@@ -72,15 +71,12 @@ func AssertMetricDimensions(t *testing.T, g prometheus.Gatherer, n string, dimen
 				for _, given := range metric.GetLabel() {
 					for expectedKey, expectedValue := range dimensions {
 						if given.GetName() != expectedKey {
-							//t.Log("dont match 1", m.GetName(), given.GetName(), given.GetValue(), expectedKey, expectedValue)
 							continue
 						}
 						if given.GetValue() != expectedValue {
-							//t.Log("dont match 2", m.GetName(), given.GetName(), given.GetValue(), expectedKey, expectedValue)
 							continue
 						}
 						match++
-						//t.Log("match", m.GetName(), given.GetName(), given.GetValue(), expectedKey, expectedValue)
 						continue GivenLabels
 					}
 				}
