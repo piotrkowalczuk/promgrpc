@@ -25,7 +25,8 @@
 // It is aware of a collector and knows how to use it to record event occurrences.
 // Each implementation satisfies stats.Handler and prometheus.Collector interface and knows how to monitor a single dimension, e.g. a total number of received/sent requests:
 //
-//  func NewRequestsStatsHandler(Subsystem, *prometheus.GaugeVec, ...StatsHandlerOption) *RequestsStatsHandler
+//  func NewClientRequestsTotalStatsHandler(*prometheus.GaugeVec, ...StatsHandlerOption) *ClientRequestsTotalStatsHandler
+//  func NewServerRequestsTotalStatsHandler(*prometheus.GaugeVec, ...StatsHandlerOption) *ServerRequestsTotalStatsHandler
 //
 // Above all, there is a coordinator.
 // StatsHandler combines multiple stats handlers into a single instance.
@@ -61,7 +62,7 @@
 // Having all metrics enabled could not be desirable.
 // Some, like histograms, can create significant overhead on the producer side.
 // If performance is critical, it advisable to reduce the set of metrics.
-// To do that, implement a custom version of coordinator constructor, ClientStatsHandler and ServerStatsHandler.
+// To do that, implement a custom version of coordinator constructor, ClientStatsHandler and/or ServerStatsHandler.
 //
 // Another good reason to change default settings is backward compatibility.
 // Migration of Grafana dashboards is not an easy nor quick task.

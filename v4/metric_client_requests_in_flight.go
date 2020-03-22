@@ -3,6 +3,8 @@ package promgrpc
 import (
 	"context"
 
+	"github.com/piotrkowalczuk/promgrpc/v4/internal/useragent"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc/stats"
 )
@@ -13,25 +15,27 @@ func NewClientRequestsInFlightGaugeVec(opts ...CollectorOption) *prometheus.Gaug
 		labelIsFailFast,
 		labelMethod,
 		labelService,
+		labelClientUserAgent,
 	}
 	return newRequestsInFlightGaugeVec("client", labels, opts...)
 }
 
 type ClientRequestsInFlightStatsHandler struct {
 	baseStatsHandler
+	uas useragent.Store
 	vec *prometheus.GaugeVec
 }
 
 // NewClientRequestsInFlightStatsHandler ...
 func NewClientRequestsInFlightStatsHandler(vec *prometheus.GaugeVec, opts ...StatsHandlerOption) *ClientRequestsInFlightStatsHandler {
 	h := &ClientRequestsInFlightStatsHandler{
-		baseStatsHandler: baseStatsHandler{
-			collector: vec,
-			options: statsHandlerOptions{
-				handleRPCLabelFn: clientRequestsInFlightLabels,
-			},
-		},
 		vec: vec,
+	}
+	h.baseStatsHandler = baseStatsHandler{
+		collector: vec,
+		options: statsHandlerOptions{
+			handleRPCLabelFn: h.labels,
+		},
 	}
 	h.applyOpts(opts...)
 
@@ -41,7 +45,7 @@ func NewClientRequestsInFlightStatsHandler(vec *prometheus.GaugeVec, opts ...Sta
 // HandleRPC processes the RPC stats.
 func (h *ClientRequestsInFlightStatsHandler) HandleRPC(ctx context.Context, stat stats.RPCStats) {
 	switch stat.(type) {
-	case *stats.Begin:
+	case *stats.OutHeader:
 		switch {
 		case stat.IsClient():
 			h.vec.WithLabelValues(h.options.handleRPCLabelFn(ctx, stat)...).Inc()
@@ -54,12 +58,13 @@ func (h *ClientRequestsInFlightStatsHandler) HandleRPC(ctx context.Context, stat
 	}
 }
 
-func clientRequestsInFlightLabels(ctx context.Context, _ stats.RPCStats) []string {
-	tag := ctx.Value(tagRPCKey).(rpcTag)
+func (h *ClientRequestsInFlightStatsHandler) labels(ctx context.Context, stat stats.RPCStats) []string {
+	tag := ctx.Value(tagRPCKey).(rpcTagLabels)
 	// keep alphabetical order
 	return []string{
 		tag.isFailFast,
 		tag.method,
 		tag.service,
+		h.uas.ClientSide(ctx, stat),
 	}
 }

@@ -54,7 +54,7 @@ func (h *ServerRequestDurationStatsHandler) HandleRPC(ctx context.Context, stat 
 }
 
 func serverRequestDurationLabels(ctx context.Context, stat stats.RPCStats) []string {
-	tag := ctx.Value(tagRPCKey).(rpcTag)
+	tag := ctx.Value(tagRPCKey).(rpcTagLabels)
 	return []string{
 		tag.clientUserAgent,
 		status.Code(stat.(*stats.End).Error).String(),

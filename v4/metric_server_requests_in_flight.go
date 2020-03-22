@@ -54,7 +54,7 @@ func (h *ServerRequestsInFlightStatsHandler) HandleRPC(ctx context.Context, stat
 }
 
 func serverRequestsInFlightLabels(ctx context.Context, _ stats.RPCStats) []string {
-	tag := ctx.Value(tagRPCKey).(rpcTag)
+	tag := ctx.Value(tagRPCKey).(rpcTagLabels)
 	// keep alphabetical order
 	return []string{
 		tag.method,

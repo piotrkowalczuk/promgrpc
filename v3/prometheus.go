@@ -121,6 +121,8 @@ func (i *Interceptor) UnaryClient() grpc.UnaryClientInterceptor {
 	return func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
 		start := time.Now()
 
+		md, _ := metadata.FromOutgoingContext(ctx)
+		fmt.Println(md.Get("user-agent"))
 		err := invoker(ctx, method, req, reply, cc, opts...)
 		code := grpc.Code(err)
 		service, method := split(method)

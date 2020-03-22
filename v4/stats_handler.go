@@ -70,11 +70,11 @@ func ServerStatsHandler(opts ...ShareableOption) *StatsHandler {
 func (h *StatsHandler) TagRPC(ctx context.Context, inf *stats.RPCTagInfo) context.Context {
 	service, method := split(inf.FullMethodName)
 
-	ctx = context.WithValue(ctx, tagRPCKey, rpcTag{
+	ctx = context.WithValue(ctx, tagRPCKey, rpcTagLabels{
 		isFailFast:      strconv.FormatBool(inf.FailFast),
 		service:         service,
 		method:          method,
-		clientUserAgent: userAgent(ctx),
+		clientUserAgent: userAgentOnServerSide(ctx, inf),
 	})
 
 	for _, c := range h.handlers {
@@ -134,19 +134,19 @@ func (h *baseStatsHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) c
 
 // TagConn implements stats Handler interface.
 func (h *baseStatsHandler) TagConn(ctx context.Context, info *stats.ConnTagInfo) context.Context {
-	return context.WithValue(ctx, tagConnKey, connTag{
-		labelRemoteAddr:      info.RemoteAddr.String(),
-		labelLocalAddr:       info.LocalAddr.String(),
-		labelClientUserAgent: userAgent(ctx),
+	return context.WithValue(ctx, tagConnKey, connTagLabels{
+		remoteAddr:      info.RemoteAddr.String(),
+		localAddr:       info.LocalAddr.String(),
+		clientUserAgent: userAgentOnServerSide(ctx, &stats.RPCTagInfo{}),
 	})
 }
 
 // HandleConn implements stats Handler interface.
-func (h *baseStatsHandler) HandleConn(ctx context.Context, stat stats.ConnStats) {
+func (h *baseStatsHandler) HandleConn(_ context.Context, _ stats.ConnStats) {
 }
 
 // HandleRPC implements stats Handler interface.
-func (h *baseStatsHandler) HandleRPC(ctx context.Context, stat stats.RPCStats) {
+func (h *baseStatsHandler) HandleRPC(_ context.Context, _ stats.RPCStats) {
 }
 
 // Describe implements prometheus Collector interface.

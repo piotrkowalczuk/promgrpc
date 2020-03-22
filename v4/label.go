@@ -6,17 +6,27 @@ import (
 	"google.golang.org/grpc/stats"
 )
 
-type rpcTag struct {
+const (
+	labelService         = "grpc_service"
+	labelMethod          = "grpc_method"
+	labelCode            = "grpc_code"
+	labelIsFailFast      = "grpc_is_fail_fast"
+	labelRemoteAddr      = "grpc_remote_addr"
+	labelLocalAddr       = "grpc_local_addr"
+	labelClientUserAgent = "grpc_client_user_agent"
+)
+
+type rpcTagLabels struct {
 	isFailFast      string
 	service         string
 	method          string
 	clientUserAgent string
 }
 
-type connTag struct {
-	labelRemoteAddr      string
-	labelLocalAddr       string
-	labelClientUserAgent string
+type connTagLabels struct {
+	remoteAddr      string
+	localAddr       string
+	clientUserAgent string
 }
 
 // HandleRPCLabelFunc type represents a function signature that can be passed into a stats handler and used instead of default one.

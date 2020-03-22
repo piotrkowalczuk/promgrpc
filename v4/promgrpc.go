@@ -4,18 +4,14 @@ import (
 	"context"
 	"strings"
 
+	"google.golang.org/grpc/stats"
+
 	"google.golang.org/grpc/metadata"
 )
 
 const (
-	namespace            = "grpc"
-	labelService         = "grpc_service"
-	labelMethod          = "grpc_method"
-	labelCode            = "grpc_code"
-	labelIsFailFast      = "grpc_is_fail_fast"
-	labelRemoteAddr      = "grpc_remote_addr"
-	labelLocalAddr       = "grpc_local_addr"
-	labelClientUserAgent = "grpc_client_user_agent"
+	namespace    = "grpc"
+	notAvailable = "n/a"
 )
 
 type ctxKey int
@@ -32,11 +28,11 @@ func split(name string) (string, string) {
 	return "unknown", "unknown"
 }
 
-func userAgent(ctx context.Context) string {
+func userAgentOnServerSide(ctx context.Context, _ *stats.RPCTagInfo) string {
 	if md, ok := metadata.FromIncomingContext(ctx); ok {
-		if ua, ok := md["user-agent"]; ok {
+		if ua, ok := md["user-agent"]; ok && len(ua) == 1 {
 			return ua[0]
 		}
 	}
-	return "n/a"
+	return notAvailable
 }

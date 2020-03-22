@@ -18,6 +18,7 @@ func suite(t *testing.T) (test.TestServiceClient, *prometheus.Registry, func(*te
 	defer cancel()
 
 	ssh := promgrpc.ServerStatsHandler(
+		promgrpc.CollectorWithUserAgent("test", "v4.1.2"),
 		promgrpc.CollectorWithConstLabels(prometheus.Labels{"service": "test"}),
 	)
 	csh := promgrpc.ClientStatsHandler(

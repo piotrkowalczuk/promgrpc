@@ -50,7 +50,7 @@ func (h *ServerMessagesSentTotalStatsHandler) HandleRPC(ctx context.Context, sta
 }
 
 func serverMessagesSentTotalLabels(ctx context.Context, _ stats.RPCStats) []string {
-	tag := ctx.Value(tagRPCKey).(rpcTag)
+	tag := ctx.Value(tagRPCKey).(rpcTagLabels)
 	return []string{
 		tag.clientUserAgent,
 		tag.method,

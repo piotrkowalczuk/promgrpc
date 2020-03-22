@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/piotrkowalczuk/promgrpc/v4/internal/testutil"
-
 	"github.com/piotrkowalczuk/promgrpc/v4/pb/private/test"
 	"github.com/prometheus/client_golang/prometheus"
+	"google.golang.org/grpc"
 )
 
 func TestStatsHandler(t *testing.T) {
@@ -40,29 +40,32 @@ func TestStatsHandler(t *testing.T) {
 		// CLIENT
 		testutil.AssertMetricValue(t, reg, "grpc_client_connections", e.connections)
 		testutil.AssertMetricValue(t, reg, "grpc_client_message_received_size_histogram_bytes_count", e.clientMessagesReceived)
-		testutil.AssertMetricDimensions(t, reg, "grpc_client_message_received_size_histogram_bytes_count", map[string]string{
-			"grpc_method":            "ServerSide",
-			"grpc_service":           "piotrkowalczuk.promgrpc.v4.test.TestService",
-			"service":                "test",
-			"grpc_is_fail_fast":      "true",
-			"grpc_client_user_agent": "n/a",
-		})
 		testutil.AssertMetricValue(t, reg, "grpc_client_message_sent_size_histogram_bytes_count", e.clientMessagesSent)
 		testutil.AssertMetricValue(t, reg, "grpc_client_messages_received_total", e.clientMessagesReceived)
 		testutil.AssertMetricValue(t, reg, "grpc_client_messages_sent_total", e.clientMessagesSent)
 		testutil.AssertMetricValue(t, reg, "grpc_client_request_duration_histogram_seconds_count", e.clientResponsesReceived)
 		testutil.AssertMetricValue(t, reg, "grpc_client_requests_in_flight", e.clientRequestsInFlight)
+		testutil.AssertMetricDimensions(t, reg, "grpc_client_requests_in_flight", map[string]string{
+			"grpc_service":           "piotrkowalczuk.promgrpc.v4.test.TestService",
+			"service":                "test",
+			"grpc_is_fail_fast":      "true",
+			"grpc_client_user_agent": fmt.Sprintf("test grpc-go/%s", grpc.Version),
+		})
 		testutil.AssertMetricValue(t, reg, "grpc_client_requests_sent_total", e.clientRequestsSent)
+		testutil.AssertMetricDimensions(t, reg, "grpc_client_requests_sent_total", map[string]string{
+			"grpc_service":           "piotrkowalczuk.promgrpc.v4.test.TestService",
+			"service":                "test",
+			"grpc_is_fail_fast":      "true",
+			"grpc_client_user_agent": fmt.Sprintf("test grpc-go/%s", grpc.Version),
+		})
 		testutil.AssertMetricValue(t, reg, "grpc_client_responses_received_total", e.clientResponsesReceived)
 		// SERVER
 		testutil.AssertMetricValue(t, reg, "grpc_server_connections", e.connections)
 		testutil.AssertMetricValue(t, reg, "grpc_server_message_received_size_histogram_bytes_count", e.clientMessagesSent)
 		testutil.AssertMetricDimensions(t, reg, "grpc_server_message_received_size_histogram_bytes_count", map[string]string{
-			"grpc_method":            "ServerSide",
 			"grpc_service":           "piotrkowalczuk.promgrpc.v4.test.TestService",
 			"service":                "test",
-			"grpc_is_fail_fast":      "false",
-			"grpc_client_user_agent": "test grpc-go/1.24.0",
+			"grpc_client_user_agent": fmt.Sprintf("test grpc-go/%s", grpc.Version),
 		})
 		testutil.AssertMetricValue(t, reg, "grpc_server_message_sent_size_histogram_bytes_count", e.clientMessagesReceived)
 		testutil.AssertMetricValue(t, reg, "grpc_server_messages_received_total", e.clientMessagesSent)
@@ -71,6 +74,11 @@ func TestStatsHandler(t *testing.T) {
 		testutil.AssertMetricValue(t, reg, "grpc_server_requests_in_flight", e.clientRequestsInFlight)
 		testutil.AssertMetricValue(t, reg, "grpc_server_requests_received_total", e.clientRequestsSent)
 		testutil.AssertMetricValue(t, reg, "grpc_server_responses_sent_total", e.clientResponsesReceived)
+		testutil.AssertMetricDimensions(t, reg, "grpc_server_message_received_size_histogram_bytes_count", map[string]string{
+			"grpc_service":           "piotrkowalczuk.promgrpc.v4.test.TestService",
+			"service":                "test",
+			"grpc_client_user_agent": fmt.Sprintf("test grpc-go/%s", grpc.Version),
+		})
 	}
 
 	exp.connections += 1
