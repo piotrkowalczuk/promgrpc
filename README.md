@@ -1,9 +1,8 @@
 # promgrpc [![Build Status](https://travis-ci.org/piotrkowalczuk/promgrpc.svg?branch=master)](https://travis-ci.org/piotrkowalczuk/promgrpc)
 
 [![GoDoc](https://godoc.org/github.com/piotrkowalczuk/promgrpc?status.svg)](https://pkg.go.dev/github.com/piotrkowalczuk/promgrpc/v4)
-[![GolangCI](https://golangci.com/badges/github.com/piotrkowalczuk/promgrpc.svg)](https://golangci.com/r/github.com/piotrkowalczuk/promgrpc)
 
-Package promgrpc is an instrumentation package that allows capturing metrics of your gRPC based services, both the server and the client side.
+Package `promgrpc` is an instrumentation package that allows capturing metrics of your gRPC based services, both the server and the client side.
 The main goal of version 4 was to make it modular without sacrificing the simplicity of use.
 
 It is still possible to integrate the package in just a few lines.
@@ -123,7 +122,7 @@ imp := newDemoServer()
 test.RegisterTestServiceServer(srv, imp)
 reg.MustRegister(ssh)
 reg.MustRegister(csh)
-``
+```
 
 ## Development
 
