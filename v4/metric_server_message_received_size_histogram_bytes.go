@@ -48,7 +48,7 @@ func (h *ServerMessageReceivedSizeStatsHandler) HandleRPC(ctx context.Context, s
 }
 
 func serverMessageReceivedSizeLabels(ctx context.Context, _ stats.RPCStats) []string {
-	tag := ctx.Value(tagRPCKey).(rpcTag)
+	tag := ctx.Value(tagRPCKey).(rpcTagLabels)
 	return []string{
 		tag.clientUserAgent,
 		tag.method,

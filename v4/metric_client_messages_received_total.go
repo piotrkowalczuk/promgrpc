@@ -3,6 +3,8 @@ package promgrpc
 import (
 	"context"
 
+	"github.com/piotrkowalczuk/promgrpc/v4/internal/useragent"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc/stats"
 )
@@ -12,12 +14,14 @@ func NewClientMessagesReceivedTotalCounterVec(opts ...CollectorOption) *promethe
 		labelIsFailFast,
 		labelMethod,
 		labelService,
+		labelClientUserAgent,
 	}
 	return newMessagesReceivedTotalCounterVec("client", labels, opts...)
 }
 
 type ClientMessagesReceivedTotalStatsHandler struct {
 	baseStatsHandler
+	uas useragent.Store
 	vec *prometheus.CounterVec
 }
 
@@ -26,13 +30,13 @@ type ClientMessagesReceivedTotalStatsHandler struct {
 // For those, the only allowed labelsFn names are "fail_fast", "handler", "service" and "user_agent".
 func NewClientMessagesReceivedTotalStatsHandler(vec *prometheus.CounterVec, opts ...StatsHandlerOption) *ClientMessagesReceivedTotalStatsHandler {
 	h := &ClientMessagesReceivedTotalStatsHandler{
-		baseStatsHandler: baseStatsHandler{
-			collector: vec,
-			options: statsHandlerOptions{
-				handleRPCLabelFn: clientMessagesReceivedTotalLabels,
-			},
-		},
 		vec: vec,
+	}
+	h.baseStatsHandler = baseStatsHandler{
+		collector: vec,
+		options: statsHandlerOptions{
+			handleRPCLabelFn: h.labels,
+		},
 	}
 	h.applyOpts(opts...)
 
@@ -49,11 +53,12 @@ func (h *ClientMessagesReceivedTotalStatsHandler) HandleRPC(ctx context.Context,
 	}
 }
 
-func clientMessagesReceivedTotalLabels(ctx context.Context, _ stats.RPCStats) []string {
-	tag := ctx.Value(tagRPCKey).(rpcTag)
+func (h *ClientMessagesReceivedTotalStatsHandler) labels(ctx context.Context, stat stats.RPCStats) []string {
+	tag := ctx.Value(tagRPCKey).(rpcTagLabels)
 	return []string{
 		tag.isFailFast,
 		tag.method,
 		tag.service,
+		h.uas.ClientSide(ctx, stat),
 	}
 }

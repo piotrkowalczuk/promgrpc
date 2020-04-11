@@ -3,6 +3,8 @@ package promgrpc
 import (
 	"context"
 
+	"github.com/piotrkowalczuk/promgrpc/v4/internal/useragent"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc/stats"
 )
@@ -12,25 +14,27 @@ func NewClientMessageReceivedSizeHistogramVec(opts ...CollectorOption) *promethe
 		labelIsFailFast,
 		labelMethod,
 		labelService,
+		labelClientUserAgent,
 	}
 	return newMessageReceivedSizeHistogramVec("client", labels, opts...)
 }
 
 type ClientMessageReceivedSizeStatsHandler struct {
 	baseStatsHandler
+	uas useragent.Store
 	vec prometheus.ObserverVec
 }
 
 // NewMessageReceivedSizeStatsHandler ...
 func NewClientMessageReceivedSizeStatsHandler(vec prometheus.ObserverVec, opts ...StatsHandlerOption) *ClientMessageReceivedSizeStatsHandler {
 	h := &ClientMessageReceivedSizeStatsHandler{
-		baseStatsHandler: baseStatsHandler{
-			collector: vec,
-			options: statsHandlerOptions{
-				handleRPCLabelFn: clientMessageReceivedSizeLabels,
-			},
-		},
 		vec: vec,
+	}
+	h.baseStatsHandler = baseStatsHandler{
+		collector: vec,
+		options: statsHandlerOptions{
+			handleRPCLabelFn: h.labels,
+		},
 	}
 	h.applyOpts(opts...)
 
@@ -47,11 +51,12 @@ func (h *ClientMessageReceivedSizeStatsHandler) HandleRPC(ctx context.Context, s
 	}
 }
 
-func clientMessageReceivedSizeLabels(ctx context.Context, _ stats.RPCStats) []string {
-	tag := ctx.Value(tagRPCKey).(rpcTag)
+func (h *ClientMessageReceivedSizeStatsHandler) labels(ctx context.Context, stat stats.RPCStats) []string {
+	tag := ctx.Value(tagRPCKey).(rpcTagLabels)
 	return []string{
 		tag.isFailFast,
 		tag.method,
 		tag.service,
+		h.uas.ClientSide(ctx, stat),
 	}
 }

@@ -66,23 +66,28 @@ func AssertMetricDimensions(t *testing.T, g prometheus.Gatherer, n string, dimen
 		if m.GetName() == name {
 			//var got float64
 			for _, metric := range m.GetMetric() {
+				var b strings.Builder
 				var match int
 			GivenLabels:
 				for _, given := range metric.GetLabel() {
 					for expectedKey, expectedValue := range dimensions {
 						if given.GetName() != expectedKey {
+							//b.WriteString(fmt.Sprintf("PAIR MISMATCH ON KEY:\nKEY:\n	%s\n	%s\nVALUE:\n	%s\n	%s\n\n", given.GetName(), expectedKey, given.GetValue(), expectedValue))
 							continue
 						}
 						if given.GetValue() != expectedValue {
+							b.WriteString(fmt.Sprintf("PAIR MISMATCH ON VALUE:\nKEY:\n	%s\n	%s\nVALUE:\n	%s\n	%s\n\n", given.GetName(), expectedKey, given.GetValue(), expectedValue))
 							continue
 						}
+						b.WriteString(fmt.Sprintf("PAIR MATCH:\nKEY:\n	%s\n	%s\nVALUE:\n	%s\n	%s\n\n", given.GetName(), expectedKey, given.GetValue(), expectedValue))
 						match++
 						continue GivenLabels
 					}
 				}
-				if match == len(metric.GetLabel()) {
+				if match == len(dimensions) {
 					return
 				}
+				fmt.Printf("MATCH %d:%d\n%s\n\n%s\n\n", match, len(dimensions), b.String(), metric.String())
 				sb.WriteString(fmt.Sprintf("metric checked, but does not match: %s\n	%v\n	%v\n", m.GetName(), metric.GetLabel(), dimensions))
 			}
 		}

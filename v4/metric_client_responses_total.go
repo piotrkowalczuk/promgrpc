@@ -3,6 +3,8 @@ package promgrpc
 import (
 	"context"
 
+	"github.com/piotrkowalczuk/promgrpc/v4/internal/useragent"
+
 	"google.golang.org/grpc/status"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -17,6 +19,7 @@ func NewClientResponsesTotalCounterVec(opts ...CollectorOption) *prometheus.Coun
 		labelIsFailFast,
 		labelMethod,
 		labelService,
+		labelClientUserAgent,
 	}
 	return newResponsesTotalCounterVec("client", "responses_received_total", "TODO", labels, opts...)
 }
@@ -24,19 +27,20 @@ func NewClientResponsesTotalCounterVec(opts ...CollectorOption) *prometheus.Coun
 // ClientResponsesTotalStatsHandler is responsible for counting number of incoming (server side) or outgoing (client side) requests.
 type ClientResponsesTotalStatsHandler struct {
 	baseStatsHandler
+	uas useragent.Store
 	vec *prometheus.CounterVec
 }
 
 // NewClientResponsesTotalStatsHandler ...
 func NewClientResponsesTotalStatsHandler(vec *prometheus.CounterVec, opts ...StatsHandlerOption) *ClientResponsesTotalStatsHandler {
 	h := &ClientResponsesTotalStatsHandler{
-		baseStatsHandler: baseStatsHandler{
-			collector: vec,
-			options: statsHandlerOptions{
-				handleRPCLabelFn: clientResponsesTotalLabels,
-			},
-		},
 		vec: vec,
+	}
+	h.baseStatsHandler = baseStatsHandler{
+		collector: vec,
+		options: statsHandlerOptions{
+			handleRPCLabelFn: h.labels,
+		},
 	}
 	h.applyOpts(opts...)
 
@@ -53,12 +57,13 @@ func (h *ClientResponsesTotalStatsHandler) HandleRPC(ctx context.Context, stat s
 	}
 }
 
-func clientResponsesTotalLabels(ctx context.Context, stat stats.RPCStats) []string {
-	tag := ctx.Value(tagRPCKey).(rpcTag)
+func (h *ClientResponsesTotalStatsHandler) labels(ctx context.Context, stat stats.RPCStats) []string {
+	tag := ctx.Value(tagRPCKey).(rpcTagLabels)
 	return []string{
 		status.Code(stat.(*stats.End).Error).String(),
 		tag.isFailFast,
 		tag.method,
 		tag.service,
+		h.uas.ClientSide(ctx, stat),
 	}
 }

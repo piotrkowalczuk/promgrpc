@@ -44,11 +44,11 @@ func (h *ServerConnectionsStatsHandler) HandleConn(ctx context.Context, stat sta
 }
 
 func (h *ServerConnectionsStatsHandler) labels(ctx context.Context) []string {
-	tag := ctx.Value(tagConnKey).(connTag)
+	tag := ctx.Value(tagConnKey).(connTagLabels)
 	return []string{
-		tag.labelClientUserAgent,
-		tag.labelLocalAddr,
-		tag.labelRemoteAddr,
+		tag.remoteAddr,
+		tag.localAddr,
+		tag.clientUserAgent,
 	}
 
 }

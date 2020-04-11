@@ -1,6 +1,11 @@
 package promgrpc
 
-import "github.com/prometheus/client_golang/prometheus"
+import (
+	"fmt"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"google.golang.org/grpc"
+)
 
 // ShareableOption is a simple wrapper for shareable method.
 // It makes it possible to distinguish options reserved for direct usage, from those that are applicable on a set of objects.
@@ -59,6 +64,7 @@ func StatsHandlerWithTagRPCLabelsFunc(fn TagRPCLabelFunc) StatsHandlerOption {
 
 type collectorOptions struct {
 	namespace   string
+	userAgent   string
 	constLabels prometheus.Labels
 }
 
@@ -103,6 +109,13 @@ func newFuncShareableCollectorOption(f func(*collectorOptions)) *funcShareableCo
 func CollectorWithNamespace(namespace string) ShareableCollectorOption {
 	return newFuncShareableCollectorOption(func(o *collectorOptions) {
 		o.namespace = namespace
+	})
+}
+
+// CollectorWithUserAgent ...
+func CollectorWithUserAgent(name, version string) ShareableCollectorOption {
+	return newFuncShareableCollectorOption(func(o *collectorOptions) {
+		o.userAgent = fmt.Sprintf("grpc/%s %s/%s", grpc.Version, name, version)
 	})
 }
 
