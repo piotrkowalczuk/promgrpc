@@ -3,6 +3,7 @@ package promgrpc
 import (
 	"context"
 	"fmt"
+	"net"
 	"strconv"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -134,8 +135,10 @@ func (h *baseStatsHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) c
 
 // TagConn implements stats Handler interface.
 func (h *baseStatsHandler) TagConn(ctx context.Context, info *stats.ConnTagInfo) context.Context {
+	remoteAddr, _, _ := net.SplitHostPort(info.RemoteAddr.String())
+
 	return context.WithValue(ctx, tagConnKey, connTagLabels{
-		remoteAddr:      info.RemoteAddr.String(),
+		remoteAddr:      remoteAddr,
 		localAddr:       info.LocalAddr.String(),
 		clientUserAgent: userAgentOnServerSide(ctx, &stats.RPCTagInfo{}),
 	})
