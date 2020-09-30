@@ -50,7 +50,7 @@ func ClientStatsHandler(opts ...ShareableOption) *StatsHandler {
 	)
 }
 
-// ClientStatsHandler instantiates a default server-side coordinator together with every metric specific stats handler provided by this package.
+// ServerStatsHandler instantiates a default server-side coordinator together with every metric specific stats handler provided by this package.
 func ServerStatsHandler(opts ...ShareableOption) *StatsHandler {
 	collectorOpts, statsHandlerOpts := optionsSplit(opts...)
 
