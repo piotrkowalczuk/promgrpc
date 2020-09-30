@@ -16,7 +16,7 @@ const (
 
 type ctxKey int
 
-var (
+const (
 	tagRPCKey  ctxKey = 1
 	tagConnKey ctxKey = 3
 )
