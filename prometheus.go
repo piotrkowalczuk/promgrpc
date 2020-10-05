@@ -256,7 +256,7 @@ func (i *Interceptor) Collect(in chan<- prometheus.Metric) {
 
 type ctxKey int
 
-var (
+const (
 	tagRPCKey  ctxKey = 1
 	tagConnKey ctxKey = 2
 )
