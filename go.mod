@@ -10,11 +10,9 @@ require (
 	github.com/golangplus/fmt v0.0.0-20150411045040-2a5d6d7d2995 // indirect
 	github.com/golangplus/math v0.0.0-20160111164325-e46ff059737d // indirect
 	github.com/golangplus/sort v0.0.0-20160821213012-8253da0d33c1 // indirect
-	github.com/prometheus/client_golang v1.0.0
-	golang.org/x/net v0.0.0-20181114220301-adae6a3d119a
-	golang.org/x/text v0.3.0 // indirect
-	google.golang.org/genproto v0.0.0-20180722052100-02b4e9547331 // indirect
-	google.golang.org/grpc v1.13.0
+	github.com/prometheus/client_golang v1.8.0
+	golang.org/x/net v0.0.0-20200625001655-4c5254603344
+	google.golang.org/grpc v1.26.0
 )
 
 go 1.13
