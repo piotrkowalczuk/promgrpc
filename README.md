@@ -46,7 +46,7 @@ Above all, there is a coordinator.
 
 ## Metrics
 
-The package comes with eighteen predefined metrics — nine for server and nine for client side:
+The package comes with eighteen predefined metrics — nine for server side and nine for client side:
 
 ```bash
  grpc_client_connections
@@ -77,13 +77,13 @@ It is beneficial for different reasons.
 Having all metrics enabled could not be desirable.
 Some, like histograms, can create significant overhead on the producer side.
 If performance is critical, it advisable to reduce the set of metrics.
-To do that, implement a custom version of coordinator constructor, ClientStatsHandler and/or ServerStatsHandler.
+To do that, implement a custom version of coordinator constructor, `ClientStatsHandler` and/or `ServerStatsHandler`.
 
 Another good reason to change default settings is backward compatibility.
 Migration of Grafana dashboards is not an easy nor quick task.
-If the discrepancy is small and, e.g. the only necessary adjustment is changing the namespace, it is achievable by passing CollectorWithNamespace to a collector constructor.
-It is the same very known pattern from the gRPC package, with some enhancements.
-What makes it different is that both StatsHandlerOption and CollectorOption have a shareable variant, called ShareableCollectorOption and ShareableStatsHandlerOption respectively.
+If the discrepancy is small and, e.g. the only necessary adjustment is changing the namespace, it is achievable by passing `CollectorWithNamespace` to a collector constructor.
+It is the same well-known pattern from the gRPC package, with some enhancements.
+What makes it different is that both `StatsHandlerOption` and `CollectorOption` have a shareable variant, called `ShareableCollectorOption` and `ShareableStatsHandlerOption` respectively.
 Thanks to that, it is possible to pass options related to stats handlers and collectors to coordinator constructors.
 Constructors take care of moving options to the correct receivers.
 
