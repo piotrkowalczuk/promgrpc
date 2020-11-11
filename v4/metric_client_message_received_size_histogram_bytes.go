@@ -43,11 +43,13 @@ func NewClientMessageReceivedSizeStatsHandler(vec prometheus.ObserverVec, opts .
 
 // HandleRPC implements stats Handler interface.
 func (h *ClientMessageReceivedSizeStatsHandler) HandleRPC(ctx context.Context, stat stats.RPCStats) {
-	if pay, ok := stat.(*stats.InPayload); ok {
-		switch {
-		case stat.IsClient():
+	switch pay := stat.(type) {
+	case *stats.InPayload:
+		if stat.IsClient() {
 			h.vec.WithLabelValues(h.options.handleRPCLabelFn(ctx, stat)...).Observe(float64(pay.Length))
 		}
+	case *stats.OutHeader:
+		_ = h.uas.ClientSide(ctx, pay)
 	}
 }
 

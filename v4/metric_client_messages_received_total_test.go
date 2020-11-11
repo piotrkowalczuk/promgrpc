@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"google.golang.org/grpc/metadata"
+
 	"github.com/piotrkowalczuk/promgrpc/v4"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"google.golang.org/grpc/stats"
@@ -19,6 +21,10 @@ func TestNewClientMessagesReceivedTotalStatsHandler(t *testing.T) {
 	ctx = h.TagRPC(ctx, &stats.RPCTagInfo{
 		FullMethodName: "/service/Method",
 		FailFast:       true,
+	})
+	h.HandleRPC(ctx, &stats.OutHeader{
+		Client: true,
+		Header: metadata.MD{"user-agent": []string{"fake-user-agent"}},
 	})
 	h.HandleRPC(ctx, &stats.InPayload{
 		Client: true,
@@ -40,7 +46,7 @@ func TestNewClientMessagesReceivedTotalStatsHandler(t *testing.T) {
         # TYPE grpc_client_messages_received_total counter
 	`
 	expected := `
-		grpc_client_messages_received_total{grpc_client_user_agent="n/a/y",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service"} 3
+		grpc_client_messages_received_total{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service"} 3
 	`
 
 	if err := testutil.CollectAndCompare(h, strings.NewReader(metadata+expected), "grpc_client_messages_received_total"); err != nil {

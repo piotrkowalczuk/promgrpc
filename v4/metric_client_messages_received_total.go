@@ -45,11 +45,13 @@ func NewClientMessagesReceivedTotalStatsHandler(vec *prometheus.CounterVec, opts
 
 // HandleRPC implements stats Handler interface.
 func (h *ClientMessagesReceivedTotalStatsHandler) HandleRPC(ctx context.Context, stat stats.RPCStats) {
-	if _, ok := stat.(*stats.InPayload); ok {
-		switch {
-		case stat.IsClient():
+	switch pay := stat.(type) {
+	case *stats.InPayload:
+		if stat.IsClient() {
 			h.vec.WithLabelValues(h.options.handleRPCLabelFn(ctx, stat)...).Inc()
 		}
+	case *stats.OutHeader:
+		_ = h.uas.ClientSide(ctx, pay)
 	}
 }
 
