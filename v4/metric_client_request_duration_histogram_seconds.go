@@ -46,13 +46,15 @@ func NewClientRequestDurationStatsHandler(vec prometheus.ObserverVec, opts ...St
 
 // HandleRPC processes the RPC stats.
 func (h *ClientRequestDurationStatsHandler) HandleRPC(ctx context.Context, stat stats.RPCStats) {
-	if end, ok := stat.(*stats.End); ok {
-		switch {
-		case stat.IsClient():
+	switch pay := stat.(type) {
+	case *stats.End:
+		if stat.IsClient() {
 			h.vec.
 				WithLabelValues(h.options.handleRPCLabelFn(ctx, stat)...).
-				Observe(end.EndTime.Sub(end.BeginTime).Seconds())
+				Observe(pay.EndTime.Sub(pay.BeginTime).Seconds())
 		}
+	case *stats.OutHeader:
+		_ = h.uas.ClientSide(ctx, pay)
 	}
 }
 
