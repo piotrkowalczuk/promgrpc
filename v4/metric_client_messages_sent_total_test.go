@@ -15,8 +15,7 @@ func TestNewClientMessagesSentTotalStatsHandler(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	g := promgrpc.NewClientMessagesSentTotalCounterVec()
-	h := promgrpc.NewStatsHandler(promgrpc.NewClientMessagesSentTotalStatsHandler(g))
+	h := promgrpc.NewStatsHandler(promgrpc.NewClientMessagesSentTotalStatsHandler(promgrpc.NewClientMessagesSentTotalCounterVec()))
 	ctx = h.TagRPC(ctx, &stats.RPCTagInfo{
 		FullMethodName: "/service/Method",
 		FailFast:       true,
@@ -44,7 +43,7 @@ func TestNewClientMessagesSentTotalStatsHandler(t *testing.T) {
 		grpc_client_messages_sent_total{grpc_client_user_agent="n/a/y",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service"} 3
 	`
 
-	if err := testutil.CollectAndCompare(g, strings.NewReader(metadata+expected), "grpc_client_messages_sent_total"); err != nil {
+	if err := testutil.CollectAndCompare(h, strings.NewReader(metadata+expected), "grpc_client_messages_sent_total"); err != nil {
 		t.Fatal(err)
 	}
 }
