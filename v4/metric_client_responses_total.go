@@ -4,11 +4,9 @@ import (
 	"context"
 
 	"github.com/piotrkowalczuk/promgrpc/v4/internal/useragent"
-
-	"google.golang.org/grpc/status"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc/stats"
+	"google.golang.org/grpc/status"
 )
 
 // NewClientResponsesTotalCounterVec allocates a new Prometheus CounterVec for the client and given set of options.
@@ -49,11 +47,13 @@ func NewClientResponsesTotalStatsHandler(vec *prometheus.CounterVec, opts ...Sta
 
 // HandleRPC implements stats Handler interface.
 func (h *ClientResponsesTotalStatsHandler) HandleRPC(ctx context.Context, stat stats.RPCStats) {
-	if _, ok := stat.(*stats.End); ok {
-		switch {
-		case stat.IsClient():
+	switch pay := stat.(type) {
+	case *stats.End:
+		if stat.IsClient() {
 			h.vec.WithLabelValues(h.options.handleRPCLabelFn(ctx, stat)...).Inc()
 		}
+	case *stats.OutHeader:
+		_ = h.uas.ClientSide(ctx, pay)
 	}
 }
 
