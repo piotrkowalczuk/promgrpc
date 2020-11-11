@@ -3,40 +3,45 @@ package promgrpc
 import (
 	"context"
 
-	"google.golang.org/grpc/status"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc/stats"
 )
 
-// NewServerResponsesTotalCounterVec allocates a new Prometheus CounterVec for the server and given set of options.
-func NewServerResponsesTotalCounterVec(opts ...CollectorOption) *prometheus.CounterVec {
-	labels := []string{
-		// keep alphabetical order
-		labelClientUserAgent,
-		labelCode,
-		labelMethod,
-		labelService,
-	}
-	return newResponsesTotalCounterVec("server", "responses_sent_total", "TODO", labels, opts...)
+var serverResponsesTotalCounterVecSupportedLabels = supportedLabels{
+	Method:          true,
+	Service:         true,
+	Code:            true,
+	ClientUserAgent: true,
 }
 
-// ServerResponsesTotalStatsHandler is responsible for counting number of incoming (server side) or outgoing (client side) requests.
+// NewServerResponsesTotalCounterVec instantiates default server-side CounterVec suitable for use with NewServerResponsesTotalStatsHandler.
+func NewServerResponsesTotalCounterVec(opts ...CollectorOption) *prometheus.CounterVec {
+	return newResponsesTotalCounterVec("server", "responses_sent_total", "TODO", serverResponsesTotalCounterVecSupportedLabels.labels(), opts...)
+}
+
+// ServerResponsesTotalStatsHandler dedicated server-side StatsHandlerCollector that counts number of responses received.
 type ServerResponsesTotalStatsHandler struct {
 	baseStatsHandler
+	serverSideLabelsHandler
+
 	vec *prometheus.CounterVec
 }
 
-// NewServerResponsesTotalStatsHandler ...
+// NewServerResponsesTotalStatsHandler instantiates ServerResponsesTotalStatsHandler based on given CounterVec and options.
+// The CounterVec must have zero, one, two, three or four non-const non-curried labels.
+// For those, the only allowed names are "grpc_method", "grpc_service", "grpc_client_user_agent" and "grpc_code".
 func NewServerResponsesTotalStatsHandler(vec *prometheus.CounterVec, opts ...StatsHandlerOption) *ServerResponsesTotalStatsHandler {
 	h := &ServerResponsesTotalStatsHandler{
-		baseStatsHandler: baseStatsHandler{
-			collector: vec,
-			options: statsHandlerOptions{
-				handleRPCLabelFn: serverResponsesTotalLabels,
-			},
-		},
 		vec: vec,
+	}
+	h.serverSideLabelsHandler = serverSideLabelsHandler{
+		supportedLabels: checkLabels(vec, serverResponsesTotalCounterVecSupportedLabels),
+	}
+	h.baseStatsHandler = baseStatsHandler{
+		collector: vec,
+		options: statsHandlerOptions{
+			handleRPCLabelFn: h.labelsTagRPC,
+		},
 	}
 	h.applyOpts(opts...)
 
@@ -50,15 +55,5 @@ func (h *ServerResponsesTotalStatsHandler) HandleRPC(ctx context.Context, stat s
 		case !stat.IsClient():
 			h.vec.WithLabelValues(h.options.handleRPCLabelFn(ctx, stat)...).Inc()
 		}
-	}
-}
-
-func serverResponsesTotalLabels(ctx context.Context, stat stats.RPCStats) []string {
-	tag := ctx.Value(tagRPCKey).(rpcTagLabels)
-	return []string{
-		tag.clientUserAgent,
-		status.Code(stat.(*stats.End).Error).String(),
-		tag.method,
-		tag.service,
 	}
 }

@@ -3,40 +3,45 @@ package promgrpc
 import (
 	"context"
 
-	"github.com/piotrkowalczuk/promgrpc/v4/internal/useragent"
-
-	"google.golang.org/grpc/status"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc/stats"
 )
 
-func NewClientRequestDurationHistogramVec(opts ...CollectorOption) *prometheus.HistogramVec {
-	labels := []string{
-		labelCode,
-		labelIsFailFast,
-		labelMethod,
-		labelService,
-		labelClientUserAgent,
-	}
-	return newRequestDurationHistogramVec("client", labels, opts...)
+var clientRequestDurationHistogramVecSupportedLabels = supportedLabels{
+	Code:            true,
+	IsFailFast:      true,
+	Method:          true,
+	Service:         true,
+	ClientUserAgent: true,
 }
 
+// NewClientRequestDurationHistogramVec instantiates client-side HistogramVec suitable for use with NewClientRequestDurationStatsHandler.
+func NewClientRequestDurationHistogramVec(opts ...CollectorOption) *prometheus.HistogramVec {
+	return newRequestDurationHistogramVec("client", clientRequestDurationHistogramVecSupportedLabels.labels(), opts...)
+}
+
+// ClientRequestDurationStatsHandler dedicated client-side StatsHandlerCollector that counts individual observations of request duration.
 type ClientRequestDurationStatsHandler struct {
 	baseStatsHandler
-	uas useragent.Store
+	clientSideLabelsHandler
+
 	vec prometheus.ObserverVec
 }
 
-// NewClientRequestDurationStatsHandler ...
+// NewClientRequestDurationStatsHandler instantiates ClientRequestDurationStatsHandler based on given ObserverVec and options.
+// The ObserverVec must have zero, one, two, three, four or five non-const non-curried labels.
+// For those, the only allowed names are "grpc_is_fail_fast", "grpc_method", "grpc_service", "grpc_client_user_agent" and "grpc_code".
 func NewClientRequestDurationStatsHandler(vec prometheus.ObserverVec, opts ...StatsHandlerOption) *ClientRequestDurationStatsHandler {
 	h := &ClientRequestDurationStatsHandler{
 		vec: vec,
 	}
+	h.clientSideLabelsHandler = clientSideLabelsHandler{
+		supportedLabels: checkLabels(vec, clientRequestDurationHistogramVecSupportedLabels),
+	}
 	h.baseStatsHandler = baseStatsHandler{
 		collector: vec,
 		options: statsHandlerOptions{
-			handleRPCLabelFn: h.labels,
+			handleRPCLabelFn: h.labelsTagRPC,
 		},
 	}
 	h.applyOpts(opts...)
@@ -54,17 +59,6 @@ func (h *ClientRequestDurationStatsHandler) HandleRPC(ctx context.Context, stat 
 				Observe(pay.EndTime.Sub(pay.BeginTime).Seconds())
 		}
 	case *stats.OutHeader:
-		_ = h.uas.ClientSide(ctx, pay)
-	}
-}
-
-func (h *ClientRequestDurationStatsHandler) labels(ctx context.Context, stat stats.RPCStats) []string {
-	tag := ctx.Value(tagRPCKey).(rpcTagLabels)
-	return []string{
-		status.Code(stat.(*stats.End).Error).String(),
-		tag.isFailFast,
-		tag.method,
-		tag.service,
-		h.uas.ClientSide(ctx, stat),
+		_ = h.clientSideLabelsHandler.userAgentStore.ClientSide(ctx, pay)
 	}
 }
