@@ -47,6 +47,7 @@ func TestNewClientConnectionsStatsHandler(t *testing.T) {
 	h.HandleConn(ctx, &stats.ConnBegin{
 		Client: true,
 	})
+
 	const metadata = `
 		# HELP grpc_client_connections TODO
 		# TYPE grpc_client_connections gauge

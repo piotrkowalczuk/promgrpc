@@ -42,8 +42,6 @@ func TestNewClientMessageReceivedSizeStatsHandler(t *testing.T) {
 		Length: 5,
 	})
 
-	<-time.After(100 * time.Millisecond)
-
 	const metadata = `
 		# HELP grpc_client_message_received_size_histogram_bytes TODO
         # TYPE grpc_client_message_received_size_histogram_bytes histogram

@@ -39,8 +39,6 @@ func TestNewClientMessagesSentTotalStatsHandler(t *testing.T) {
 		Client: false,
 	})
 
-	<-time.After(100 * time.Millisecond)
-
 	const metadata = `
 		# HELP grpc_client_messages_sent_total TODO
         # TYPE grpc_client_messages_sent_total counter
