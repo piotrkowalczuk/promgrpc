@@ -3,39 +3,44 @@ package promgrpc
 import (
 	"context"
 
-	"github.com/piotrkowalczuk/promgrpc/v4/internal/useragent"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc/stats"
 )
 
-func NewClientMessagesReceivedTotalCounterVec(opts ...CollectorOption) *prometheus.CounterVec {
-	labels := []string{
-		labelIsFailFast,
-		labelMethod,
-		labelService,
-		labelClientUserAgent,
-	}
-	return newMessagesReceivedTotalCounterVec("client", labels, opts...)
+var clientMessagesReceivedTotalCounterVecSupportedLabels = supportedLabels{
+	IsFailFast:      true,
+	Method:          true,
+	Service:         true,
+	ClientUserAgent: true,
 }
 
+// NewClientMessagesReceivedTotalCounterVec instantiates client-side CounterVec suitable for use with NewClientMessagesReceivedTotalStatsHandler.
+func NewClientMessagesReceivedTotalCounterVec(opts ...CollectorOption) *prometheus.CounterVec {
+	return newMessagesReceivedTotalCounterVec("client", clientMessagesReceivedTotalCounterVecSupportedLabels.labels(), opts...)
+}
+
+// ClientMessagesReceivedTotalStatsHandler dedicated client-side StatsHandlerCollector that counts number of messages received.
 type ClientMessagesReceivedTotalStatsHandler struct {
 	baseStatsHandler
-	uas useragent.Store
+	clientSideLabelsHandler
+
 	vec *prometheus.CounterVec
 }
 
-// NewClientMessagesReceivedTotalStatsHandler ...
-// The GaugeVec must have zero, one, two, three or four non-const non-curried labels.
-// For those, the only allowed labelsFn names are "fail_fast", "handler", "service" and "user_agent".
+// NewClientMessagesReceivedTotalStatsHandler instantiates ClientMessagesReceivedTotalStatsHandler based on given CounterVec and options.
+// The CounterVec must have zero, one, two, three or four non-const non-curried labels.
+// For those, the only allowed names are "grpc_is_fail_fast", "grpc_method", "grpc_service" and "grpc_client_user_agent".
 func NewClientMessagesReceivedTotalStatsHandler(vec *prometheus.CounterVec, opts ...StatsHandlerOption) *ClientMessagesReceivedTotalStatsHandler {
 	h := &ClientMessagesReceivedTotalStatsHandler{
 		vec: vec,
 	}
+	h.clientSideLabelsHandler = clientSideLabelsHandler{
+		supportedLabels: checkLabels(vec, clientMessagesReceivedTotalCounterVecSupportedLabels),
+	}
 	h.baseStatsHandler = baseStatsHandler{
 		collector: vec,
 		options: statsHandlerOptions{
-			handleRPCLabelFn: h.labels,
+			handleRPCLabelFn: h.labelsTagRPC,
 		},
 	}
 	h.applyOpts(opts...)
@@ -51,16 +56,6 @@ func (h *ClientMessagesReceivedTotalStatsHandler) HandleRPC(ctx context.Context,
 			h.vec.WithLabelValues(h.options.handleRPCLabelFn(ctx, stat)...).Inc()
 		}
 	case *stats.OutHeader:
-		_ = h.uas.ClientSide(ctx, pay)
-	}
-}
-
-func (h *ClientMessagesReceivedTotalStatsHandler) labels(ctx context.Context, stat stats.RPCStats) []string {
-	tag := ctx.Value(tagRPCKey).(rpcTagLabels)
-	return []string{
-		tag.isFailFast,
-		tag.method,
-		tag.service,
-		h.uas.ClientSide(ctx, stat),
+		_ = h.clientSideLabelsHandler.userAgentStore.ClientSide(ctx, pay)
 	}
 }

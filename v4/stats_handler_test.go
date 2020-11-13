@@ -79,6 +79,7 @@ func TestStatsHandler(t *testing.T) {
 			"service":                "test",
 			"grpc_client_user_agent": fmt.Sprintf("test grpc-go/%s", grpc.Version),
 		})
+
 	}
 
 	exp.connections += 1

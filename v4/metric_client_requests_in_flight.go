@@ -3,38 +3,44 @@ package promgrpc
 import (
 	"context"
 
-	"github.com/piotrkowalczuk/promgrpc/v4/internal/useragent"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc/stats"
 )
 
-func NewClientRequestsInFlightGaugeVec(opts ...CollectorOption) *prometheus.GaugeVec {
-	labels := []string{
-		// keep alphabetical order
-		labelIsFailFast,
-		labelMethod,
-		labelService,
-		labelClientUserAgent,
-	}
-	return newRequestsInFlightGaugeVec("client", labels, opts...)
+var clientRequestsInFlightGaugeVecSupportedLabels = supportedLabels{
+	IsFailFast:      true,
+	Method:          true,
+	Service:         true,
+	ClientUserAgent: true,
 }
 
+// NewClientRequestsInFlightGaugeVec instantiates client-side GaugeVec suitable for use with NewClientRequestsInFlightStatsHandler.
+func NewClientRequestsInFlightGaugeVec(opts ...CollectorOption) *prometheus.GaugeVec {
+	return newRequestsInFlightGaugeVec("client", clientRequestsInFlightGaugeVecSupportedLabels.labels(), opts...)
+}
+
+// ClientRequestsInFlightStatsHandler dedicated client-side StatsHandlerCollector that counts the number of requests currently in flight.
 type ClientRequestsInFlightStatsHandler struct {
 	baseStatsHandler
-	uas useragent.Store
+	clientSideLabelsHandler
+
 	vec *prometheus.GaugeVec
 }
 
-// NewClientRequestsInFlightStatsHandler ...
+// NewClientRequestsInFlightStatsHandler instantiates ClientRequestsInFlightStatsHandler based on given GaugeVec and options.
+// The GaugeVec must have zero, one, two, three or four non-const non-curried labels.
+// For those, the only allowed names are "grpc_is_fail_fast", "grpc_method", "grpc_service" and "grpc_client_user_agent".
 func NewClientRequestsInFlightStatsHandler(vec *prometheus.GaugeVec, opts ...StatsHandlerOption) *ClientRequestsInFlightStatsHandler {
 	h := &ClientRequestsInFlightStatsHandler{
 		vec: vec,
 	}
+	h.clientSideLabelsHandler = clientSideLabelsHandler{
+		supportedLabels: checkLabels(vec, clientRequestsInFlightGaugeVecSupportedLabels),
+	}
 	h.baseStatsHandler = baseStatsHandler{
 		collector: vec,
 		options: statsHandlerOptions{
-			handleRPCLabelFn: h.labels,
+			handleRPCLabelFn: h.labelsTagRPC,
 		},
 	}
 	h.applyOpts(opts...)
@@ -55,16 +61,5 @@ func (h *ClientRequestsInFlightStatsHandler) HandleRPC(ctx context.Context, stat
 		case stat.IsClient():
 			h.vec.WithLabelValues(h.options.handleRPCLabelFn(ctx, stat)...).Dec()
 		}
-	}
-}
-
-func (h *ClientRequestsInFlightStatsHandler) labels(ctx context.Context, stat stats.RPCStats) []string {
-	tag := ctx.Value(tagRPCKey).(rpcTagLabels)
-	// keep alphabetical order
-	return []string{
-		tag.isFailFast,
-		tag.method,
-		tag.service,
-		h.uas.ClientSide(ctx, stat),
 	}
 }

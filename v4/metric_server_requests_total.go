@@ -7,31 +7,39 @@ import (
 	"google.golang.org/grpc/stats"
 )
 
-func NewServerRequestsTotalCounterVec(opts ...CollectorOption) *prometheus.CounterVec {
-	labels := []string{
-		labelMethod,
-		labelService,
-	}
-	return newRequestsTotalCounterVec("server", "requests_received_total", "TODO", labels, opts...)
+var serverRequestsTotalCounterVecSupportedLabels = supportedLabels{
+	Method:  true,
+	Service: true,
 }
 
+// NewServerRequestsTotalCounterVec instantiates default server-side CounterVec suitable for use with NewServerRequestsTotalStatsHandler.
+func NewServerRequestsTotalCounterVec(opts ...CollectorOption) *prometheus.CounterVec {
+	return newRequestsTotalCounterVec("server", "requests_received_total", "TODO", serverRequestsTotalCounterVecSupportedLabels.labels(), opts...)
+}
+
+// ServerRequestsTotalStatsHandler dedicated server-side StatsHandlerCollector that counts number of requests sent.
 type ServerRequestsTotalStatsHandler struct {
 	baseStatsHandler
+	serverSideLabelsHandler
+
 	vec *prometheus.CounterVec
 }
 
-// NewServerRequestsTotalStatsHandler ...
-// The GaugeVec must have zero, one, two, three or four non-const non-curried labels.
-// For those, the only allowed labelsFn names are "fail_fast", "handler", "service".
+// NewServerRequestsTotalStatsHandler instantiates ServerRequestsTotalStatsHandler based on given CounterVec and options.
+// The CounterVec must have zero, one or two non-const non-curried labels.
+// For those, the only allowed names are "grpc_method" and "grpc_service".
 func NewServerRequestsTotalStatsHandler(vec *prometheus.CounterVec, opts ...StatsHandlerOption) *ServerRequestsTotalStatsHandler {
 	h := &ServerRequestsTotalStatsHandler{
-		baseStatsHandler: baseStatsHandler{
-			collector: vec,
-			options: statsHandlerOptions{
-				handleRPCLabelFn: serverRequestsTotalLabels,
-			},
-		},
 		vec: vec,
+	}
+	h.serverSideLabelsHandler = serverSideLabelsHandler{
+		supportedLabels: checkLabels(vec, serverRequestsTotalCounterVecSupportedLabels),
+	}
+	h.baseStatsHandler = baseStatsHandler{
+		collector: vec,
+		options: statsHandlerOptions{
+			handleRPCLabelFn: h.labelsTagRPC,
+		},
 	}
 	h.applyOpts(opts...)
 
@@ -45,13 +53,5 @@ func (h *ServerRequestsTotalStatsHandler) HandleRPC(ctx context.Context, stat st
 		case !beg.IsClient():
 			h.vec.WithLabelValues(h.options.handleRPCLabelFn(ctx, stat)...).Inc()
 		}
-	}
-}
-
-func serverRequestsTotalLabels(ctx context.Context, _ stats.RPCStats) []string {
-	tag := ctx.Value(tagRPCKey).(rpcTagLabels)
-	return []string{
-		tag.method,
-		tag.service,
 	}
 }

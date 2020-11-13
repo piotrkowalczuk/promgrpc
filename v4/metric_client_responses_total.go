@@ -3,41 +3,45 @@ package promgrpc
 import (
 	"context"
 
-	"github.com/piotrkowalczuk/promgrpc/v4/internal/useragent"
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc/stats"
-	"google.golang.org/grpc/status"
 )
 
-// NewClientResponsesTotalCounterVec allocates a new Prometheus CounterVec for the client and given set of options.
-func NewClientResponsesTotalCounterVec(opts ...CollectorOption) *prometheus.CounterVec {
-	labels := []string{
-		// keep alphabetical order
-		labelCode,
-		labelIsFailFast,
-		labelMethod,
-		labelService,
-		labelClientUserAgent,
-	}
-	return newResponsesTotalCounterVec("client", "responses_received_total", "TODO", labels, opts...)
+var clientResponsesTotalCounterVecSupportedLabels = supportedLabels{
+	Code:            true,
+	IsFailFast:      true,
+	Method:          true,
+	Service:         true,
+	ClientUserAgent: true,
 }
 
-// ClientResponsesTotalStatsHandler is responsible for counting number of incoming (server side) or outgoing (client side) requests.
+// NewClientResponsesTotalCounterVec instantiates client-side CounterVec suitable for use with NewClientResponsesTotalStatsHandler.
+func NewClientResponsesTotalCounterVec(opts ...CollectorOption) *prometheus.CounterVec {
+	return newResponsesTotalCounterVec("client", "responses_received_total", "TODO", clientResponsesTotalCounterVecSupportedLabels.labels(), opts...)
+}
+
+// ClientResponsesTotalStatsHandler dedicated client-side StatsHandlerCollector that counts number of responses received.
 type ClientResponsesTotalStatsHandler struct {
 	baseStatsHandler
-	uas useragent.Store
+	clientSideLabelsHandler
+
 	vec *prometheus.CounterVec
 }
 
-// NewClientResponsesTotalStatsHandler ...
+// NewClientResponsesTotalStatsHandler instantiates ClientResponsesTotalStatsHandler based on given CounterVec and options.
+// The CounterVec must have zero, one, two, three, four or five non-const non-curried labels.
+// For those, the only allowed names are "grpc_is_fail_fast", "grpc_method", "grpc_service", "grpc_client_user_agent" and "grpc_code".
 func NewClientResponsesTotalStatsHandler(vec *prometheus.CounterVec, opts ...StatsHandlerOption) *ClientResponsesTotalStatsHandler {
 	h := &ClientResponsesTotalStatsHandler{
 		vec: vec,
 	}
+	h.clientSideLabelsHandler = clientSideLabelsHandler{
+		supportedLabels: checkLabels(vec, clientResponsesTotalCounterVecSupportedLabels),
+	}
 	h.baseStatsHandler = baseStatsHandler{
 		collector: vec,
 		options: statsHandlerOptions{
-			handleRPCLabelFn: h.labels,
+			handleRPCLabelFn: h.labelsTagRPC,
 		},
 	}
 	h.applyOpts(opts...)
@@ -53,17 +57,6 @@ func (h *ClientResponsesTotalStatsHandler) HandleRPC(ctx context.Context, stat s
 			h.vec.WithLabelValues(h.options.handleRPCLabelFn(ctx, stat)...).Inc()
 		}
 	case *stats.OutHeader:
-		_ = h.uas.ClientSide(ctx, pay)
-	}
-}
-
-func (h *ClientResponsesTotalStatsHandler) labels(ctx context.Context, stat stats.RPCStats) []string {
-	tag := ctx.Value(tagRPCKey).(rpcTagLabels)
-	return []string{
-		status.Code(stat.(*stats.End).Error).String(),
-		tag.isFailFast,
-		tag.method,
-		tag.service,
-		h.uas.ClientSide(ctx, stat),
+		_ = h.clientSideLabelsHandler.userAgentStore.ClientSide(ctx, pay)
 	}
 }
