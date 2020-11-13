@@ -16,7 +16,7 @@ func TestNewClientConnectionsStatsHandler(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	h := promgrpc.NewClientConnectionsStatsHandler(promgrpc.NewClientConnectionsGaugeVec())
+	h := promgrpc.NewClientConnectionsStatsHandler(promgrpc.NewClientConnectionsGaugeVec(promgrpc.CollectorWithNamespace("promgrpctest")))
 	ctx = h.TagConn(ctx, &stats.ConnTagInfo{
 		LocalAddr: &net.TCPAddr{
 			IP:   net.IPv4(1, 2, 3, 4),
@@ -49,14 +49,14 @@ func TestNewClientConnectionsStatsHandler(t *testing.T) {
 	})
 
 	const metadata = `
-		# HELP grpc_client_connections TODO
-		# TYPE grpc_client_connections gauge
+		# HELP promgrpctest_client_connections TODO
+		# TYPE promgrpctest_client_connections gauge
 	`
 	expected := `
-		grpc_client_connections{ grpc_local_addr = "1.2.3.4:80", grpc_remote_addr = "4.3.2.1" } 1
-		grpc_client_connections{ grpc_local_addr = "1.2.3.4:90", grpc_remote_addr = "4.3.2.1" } 1
+		promgrpctest_client_connections{ grpc_local_addr = "1.2.3.4:80", grpc_remote_addr = "4.3.2.1" } 1
+		promgrpctest_client_connections{ grpc_local_addr = "1.2.3.4:90", grpc_remote_addr = "4.3.2.1" } 1
 	`
-	if err := testutil.CollectAndCompare(h, strings.NewReader(metadata+expected), "grpc_client_connections"); err != nil {
+	if err := testutil.CollectAndCompare(h, strings.NewReader(metadata+expected), "promgrpctest_client_connections"); err != nil {
 		t.Fatal(err)
 	}
 }
