@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/piotrkowalczuk/promgrpc"
+	"github.com/alexeyxo/promgrpc"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"

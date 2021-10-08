@@ -1,4 +1,4 @@
-module github.com/piotrkowalczuk/promgrpc/v4
+module github.com/alexeyxo/promgrpc/v4
 
 require (
 	github.com/golang/protobuf v1.3.3

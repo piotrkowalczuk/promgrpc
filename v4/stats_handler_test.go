@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/piotrkowalczuk/promgrpc/v4/internal/testutil"
-	"github.com/piotrkowalczuk/promgrpc/v4/pb/private/test"
+	"github.com/alexeyxo/promgrpc/v4/internal/testutil"
+	"github.com/alexeyxo/promgrpc/v4/pb/private/test"
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"
 )

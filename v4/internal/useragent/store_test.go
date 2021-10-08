@@ -6,7 +6,7 @@ import (
 
 	"google.golang.org/grpc/metadata"
 
-	"github.com/piotrkowalczuk/promgrpc/v4/internal/useragent"
+	"github.com/alexeyxo/promgrpc/v4/internal/useragent"
 	"google.golang.org/grpc/stats"
 )
 

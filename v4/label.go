@@ -4,7 +4,7 @@ import (
 	"context"
 	"reflect"
 
-	"github.com/piotrkowalczuk/promgrpc/v4/internal/useragent"
+	"github.com/alexeyxo/promgrpc/v4/internal/useragent"
 	"google.golang.org/grpc/stats"
 	"google.golang.org/grpc/status"
 )

@@ -102,7 +102,7 @@ However, if that is even not enough, it is possible to reimplement an entire sta
 ## Example
 
 ```go
-import "github.com/piotrkowalczuk/promgrpc/v4"
+import "github.com/alexeyxo/promgrpc/v4"
 
 // ...
 

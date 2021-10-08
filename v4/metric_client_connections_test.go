@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/piotrkowalczuk/promgrpc/v4"
+	"github.com/alexeyxo/promgrpc/v4"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"google.golang.org/grpc/stats"
 )
