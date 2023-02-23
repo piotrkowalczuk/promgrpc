@@ -9,9 +9,8 @@ require (
 	github.com/prometheus/client_model v0.0.0-20180712105110-5c3871d89910 // indirect
 	github.com/prometheus/common v0.0.0-20180518154759-7600349dcfe1 // indirect
 	github.com/prometheus/procfs v0.0.0-20180705121852-ae68e2d4c00f // indirect
-	golang.org/x/net v0.0.0-20180719180050-a680a1efc54d
-	golang.org/x/sync v0.0.0-20181221193216-37e7f081c4d4 // indirect
-	golang.org/x/text v0.3.0 // indirect
+	golang.org/x/net v0.0.0-20220722155237-a158d28d115b
+	golang.org/x/text v0.3.8 // indirect
 	google.golang.org/genproto v0.0.0-20180722052100-02b4e9547331 // indirect
 	google.golang.org/grpc v1.13.0
 )
