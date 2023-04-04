@@ -1,6 +1,4 @@
-# promgrpc [![Build Status](https://travis-ci.org/piotrkowalczuk/promgrpc.svg?branch=master)](https://travis-ci.org/piotrkowalczuk/promgrpc)
-
-[![GoDoc](https://godoc.org/github.com/piotrkowalczuk/promgrpc?status.svg)](https://pkg.go.dev/github.com/piotrkowalczuk/promgrpc/v4)
+# promgrpc [![GoDoc](https://godoc.org/github.com/piotrkowalczuk/promgrpc?status.svg)](https://pkg.go.dev/github.com/piotrkowalczuk/promgrpc/v4)
 
 Package `promgrpc` is an instrumentation package that allows capturing metrics of your gRPC based services, both the server and the client side.
 The main goal of version 4 was to make it modular without sacrificing the simplicity of use.
