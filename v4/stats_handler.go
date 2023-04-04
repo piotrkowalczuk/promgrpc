@@ -135,11 +135,19 @@ func (h *baseStatsHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) c
 
 // TagConn implements stats Handler interface.
 func (h *baseStatsHandler) TagConn(ctx context.Context, info *stats.ConnTagInfo) context.Context {
-	remoteAddr, _, _ := net.SplitHostPort(info.RemoteAddr.String())
+	var remoteAddr, localAddr string
+
+	if h.options.client {
+		remoteAddr = info.RemoteAddr.String()
+		localAddr, _, _ = net.SplitHostPort(info.LocalAddr.String())
+	} else {
+		remoteAddr, _, _ = net.SplitHostPort(info.RemoteAddr.String())
+		localAddr = info.LocalAddr.String()
+	}
 
 	return context.WithValue(ctx, tagConnKey, connTagLabels{
 		remoteAddr:      remoteAddr,
-		localAddr:       info.LocalAddr.String(),
+		localAddr:       localAddr,
 		clientUserAgent: userAgentOnServerSide(ctx, &stats.RPCTagInfo{}),
 	})
 }

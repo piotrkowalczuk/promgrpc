@@ -14,6 +14,9 @@ type ShareableOption interface {
 }
 
 type statsHandlerOptions struct {
+	// stats.ConnTagInfo carries no information about whether it is an incoming or outgoing connection.
+	// Use IsClient method if available.
+	client           bool
 	handleRPCLabelFn HandleRPCLabelFunc
 	tagRPCLabelFn    TagRPCLabelFunc
 }

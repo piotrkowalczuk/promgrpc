@@ -22,6 +22,9 @@ func NewClientConnectionsStatsHandler(vec *prometheus.GaugeVec) *ClientConnectio
 	return &ClientConnectionsStatsHandler{
 		baseStatsHandler: baseStatsHandler{
 			collector: vec,
+			options: statsHandlerOptions{
+				client: true,
+			},
 		},
 		vec: vec,
 	}
