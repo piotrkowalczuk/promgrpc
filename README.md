@@ -91,11 +91,11 @@ However, if that is even not enough, it is possible to reimplement an entire sta
 ## Version comparison
 
 | version | package management | api | grpc client | prometheus client | docs |
-|---------|--------------------| --- | ----------- | ----------------- | ------|
-| v1.0.2 | glide | interceptors | `^1.0.0` | `~0.8.0` |  |
-| v2.0.2 | modules| interceptors + [stats.Handler](https://godoc.org/google.golang.org/grpc/stats#Handler) | `1.13.0` | `0.8.0` | [![GoDoc](https://godoc.org/github.com/piotrkowalczuk/promgrpc?status.svg)](https://godoc.org/github.com/piotrkowalczuk/promgrpc) |
-| v3.2.2 | modules | interceptors + [stats.Handler](https://godoc.org/google.golang.org/grpc/stats#Handler) | `1.13.0` | `0.8.0` | [![GoDoc](https://godoc.org/github.com/piotrkowalczuk/promgrpc/v3?status.svg)](https://godoc.org/github.com/piotrkowalczuk/promgrpc/v3) |
-| v4.0.0 | modules | [stats.Handler](https://godoc.org/google.golang.org/grpc/stats#Handler) | `1.24.0` | `1.1.0` | [![GoDoc](https://godoc.org/github.com/piotrkowalczuk/promgrpc/v4?status.svg)](https://godoc.org/github.com/piotrkowalczuk/promgrpc/v4) |
+|---------|--------------------| --- |-------------|-------------------| ------|
+| v1.0.2 | glide | interceptors | `^1.0.0`    | `~0.8.0`          |  |
+| v2.0.2 | modules| interceptors + [stats.Handler](https://godoc.org/google.golang.org/grpc/stats#Handler) | `1.13.0`    | `0.8.0`           | [![GoDoc](https://godoc.org/github.com/piotrkowalczuk/promgrpc?status.svg)](https://godoc.org/github.com/piotrkowalczuk/promgrpc) |
+| v3.2.2 | modules | interceptors + [stats.Handler](https://godoc.org/google.golang.org/grpc/stats#Handler) | `1.13.0`    | `0.8.0`           | [![GoDoc](https://godoc.org/github.com/piotrkowalczuk/promgrpc/v3?status.svg)](https://godoc.org/github.com/piotrkowalczuk/promgrpc/v3) |
+| v4.0.0 | modules | [stats.Handler](https://godoc.org/google.golang.org/grpc/stats#Handler) | `1.58.3`    | `1.17.0`          | [![GoDoc](https://godoc.org/github.com/piotrkowalczuk/promgrpc/v4?status.svg)](https://godoc.org/github.com/piotrkowalczuk/promgrpc/v4) |
 
 ## Example
 
