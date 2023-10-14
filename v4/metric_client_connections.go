@@ -17,7 +17,7 @@ type ClientConnectionsStatsHandler struct {
 	vec *prometheus.GaugeVec
 }
 
-// NewConnectionsStatsHandler ...
+// NewClientConnectionsStatsHandler ...
 func NewClientConnectionsStatsHandler(vec *prometheus.GaugeVec) *ClientConnectionsStatsHandler {
 	return &ClientConnectionsStatsHandler{
 		baseStatsHandler: baseStatsHandler{
@@ -30,7 +30,7 @@ func NewClientConnectionsStatsHandler(vec *prometheus.GaugeVec) *ClientConnectio
 	}
 }
 
-// HandleRPC processes the RPC stats.
+// HandleConn HandleRPC processes the RPC stats.
 func (h *ClientConnectionsStatsHandler) HandleConn(ctx context.Context, stat stats.ConnStats) {
 	switch stat.(type) {
 	case *stats.ConnBegin:
