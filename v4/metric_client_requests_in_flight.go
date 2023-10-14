@@ -42,18 +42,30 @@ func NewClientRequestsInFlightStatsHandler(vec *prometheus.GaugeVec, opts ...Sta
 	return h
 }
 
+func (h *ClientRequestsInFlightStatsHandler) TagRPC(ctx context.Context, inf *stats.RPCTagInfo) context.Context {
+	ctx = h.baseStatsHandler.TagRPC(ctx, inf)
+	// LINK: https://github.com/grpc/grpc-go/issues/5823
+	ctx = context.WithValue(ctx, clientRequestInFlightKey{}, &clientRequestInFlightMark{})
+	return ctx
+}
+
 // HandleRPC processes the RPC stats.
 func (h *ClientRequestsInFlightStatsHandler) HandleRPC(ctx context.Context, stat stats.RPCStats) {
 	switch stat.(type) {
 	case *stats.OutHeader:
 		switch {
 		case stat.IsClient():
-			h.vec.WithLabelValues(h.options.handleRPCLabelFn(ctx, stat)...).Inc()
+			if mrk, ok := ctx.Value(clientRequestInFlightKey{}).(*clientRequestInFlightMark); ok {
+				mrk.started = true
+				h.vec.WithLabelValues(h.options.handleRPCLabelFn(ctx, stat)...).Inc()
+			}
 		}
 	case *stats.End:
 		switch {
 		case stat.IsClient():
-			h.vec.WithLabelValues(h.options.handleRPCLabelFn(ctx, stat)...).Dec()
+			if mrk, ok := ctx.Value(clientRequestInFlightKey{}).(*clientRequestInFlightMark); ok && mrk.started {
+				h.vec.WithLabelValues(h.options.handleRPCLabelFn(ctx, stat)...).Dec()
+			}
 		}
 	}
 }
@@ -67,4 +79,10 @@ func (h *ClientRequestsInFlightStatsHandler) labels(ctx context.Context, stat st
 		tag.service,
 		h.uas.ClientSide(ctx, stat),
 	}
+}
+
+type clientRequestInFlightKey struct{}
+
+type clientRequestInFlightMark struct {
+	started bool
 }
