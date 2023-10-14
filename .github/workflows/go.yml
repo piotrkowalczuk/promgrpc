@@ -1,8 +1,8 @@
 name: Go
 on: [push]
 jobs:
-  build:
-    name: Build
+  build-legacy:
+    name: Build Legacy
     runs-on: ubuntu-latest
     steps:
     - name: Set up Go 1.13
@@ -16,5 +16,16 @@ jobs:
       run: GO111MODULE=on go test -race -cover -count=5 .
     - name: Test v3
       run: cd ./v3 && GO111MODULE=on go test -race -cover -count=5 ./...
-    - name: Test v4
-      run: cd ./v4 && GO111MODULE=on go test -race -cover -count=5 ./...
+  build-latest:
+    name: Build Latest
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go 1.21
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.21
+        id: go
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v1
+      - name: Test v4
+        run: cd ./v4 && GO111MODULE=on go test -race -cover -count=5 ./...
