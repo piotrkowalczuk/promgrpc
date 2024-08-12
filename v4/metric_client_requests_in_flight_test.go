@@ -2,22 +2,32 @@ package promgrpc_test
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
 
 	"google.golang.org/grpc/metadata"
 
-	"github.com/piotrkowalczuk/promgrpc/v4"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"google.golang.org/grpc/stats"
+
+	"github.com/piotrkowalczuk/promgrpc/v4"
 )
 
 func TestNewClientRequestsInFlightStatsHandler(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	ctx := promgrpc.DynamicLabelValuesToCtx(context.Background(), map[string]string{dynamicLabel: dynamicLabelValue})
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 
-	h := promgrpc.NewStatsHandler(promgrpc.NewClientRequestsInFlightStatsHandler(promgrpc.NewClientRequestsInFlightGaugeVec()))
+	defer cancel()
+	collectorOpts, statsHandlerOpts := promgrpc.OptionsSplit(
+		promgrpc.CollectorStatsHandlerWithDynamicLabels([]string{dynamicLabel}),
+	)
+	h := promgrpc.NewStatsHandler(
+		promgrpc.NewClientRequestsInFlightStatsHandler(
+			promgrpc.NewClientRequestsInFlightGaugeVec(collectorOpts...),
+			statsHandlerOpts...,
+		))
 	ctx = h.TagRPC(ctx, &stats.RPCTagInfo{
 		FullMethodName: "/service/Method",
 		FailFast:       true,
@@ -49,9 +59,9 @@ func TestNewClientRequestsInFlightStatsHandler(t *testing.T) {
 		# HELP grpc_client_requests_in_flight TODO
         # TYPE grpc_client_requests_in_flight gauge
 	`
-	expected := `
-		grpc_client_requests_in_flight{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service"} 2
-	`
+	expected := fmt.Sprintf(`
+		grpc_client_requests_in_flight{%s="%s",grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service"} 2
+	`, dynamicLabel, dynamicLabelValue)
 
 	if err := testutil.CollectAndCompare(h, strings.NewReader(metadata+expected), "grpc_client_requests_in_flight"); err != nil {
 		t.Fatal(err)

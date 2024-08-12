@@ -30,12 +30,11 @@ func NewServerRequestDurationStatsHandler(vec prometheus.ObserverVec, opts ...St
 	h := &ServerRequestDurationStatsHandler{
 		baseStatsHandler: baseStatsHandler{
 			collector: vec,
-			options: statsHandlerOptions{
-				handleRPCLabelFn: serverRequestDurationLabels,
-			},
+			options:   statsHandlerOptions{},
 		},
 		vec: vec,
 	}
+	h.baseStatsHandler.options.handleRPCLabelFn = h.serverRequestDurationLabels
 	h.applyOpts(opts...)
 
 	return h
@@ -53,12 +52,17 @@ func (h *ServerRequestDurationStatsHandler) HandleRPC(ctx context.Context, stat 
 	}
 }
 
-func serverRequestDurationLabels(ctx context.Context, stat stats.RPCStats) []string {
+func (h *ServerRequestDurationStatsHandler) serverRequestDurationLabels(ctx context.Context, stat stats.RPCStats) []string {
 	tag := ctx.Value(tagRPCKey).(rpcTagLabels)
-	return []string{
+	specialLabelValues := []string{
 		tag.clientUserAgent,
 		status.Code(stat.(*stats.End).Error).String(),
 		tag.method,
 		tag.service,
 	}
+	if h.options.additionalLabelValuesFn != nil {
+		specialLabelValues = append(specialLabelValues, h.options.additionalLabelValuesFn(ctx)...)
+	}
+
+	return specialLabelValues
 }

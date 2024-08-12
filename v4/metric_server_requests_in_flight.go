@@ -26,12 +26,11 @@ func NewServerRequestsInFlightStatsHandler(vec *prometheus.GaugeVec, opts ...Sta
 	h := &ServerRequestsInFlightStatsHandler{
 		baseStatsHandler: baseStatsHandler{
 			collector: vec,
-			options: statsHandlerOptions{
-				handleRPCLabelFn: serverRequestsInFlightLabels,
-			},
+			options:   statsHandlerOptions{},
 		},
 		vec: vec,
 	}
+	h.baseStatsHandler.options.handleRPCLabelFn = h.serverRequestsInFlightLabels
 	h.applyOpts(opts...)
 
 	return h
@@ -53,11 +52,15 @@ func (h *ServerRequestsInFlightStatsHandler) HandleRPC(ctx context.Context, stat
 	}
 }
 
-func serverRequestsInFlightLabels(ctx context.Context, _ stats.RPCStats) []string {
+func (h *ServerRequestsInFlightStatsHandler) serverRequestsInFlightLabels(ctx context.Context, _ stats.RPCStats) []string {
 	tag := ctx.Value(tagRPCKey).(rpcTagLabels)
 	// keep alphabetical order
-	return []string{
+	specialLabelValues := []string{
 		tag.method,
 		tag.service,
 	}
+	if h.options.additionalLabelValuesFn != nil {
+		specialLabelValues = append(specialLabelValues, h.options.additionalLabelValuesFn(ctx)...)
+	}
+	return specialLabelValues
 }

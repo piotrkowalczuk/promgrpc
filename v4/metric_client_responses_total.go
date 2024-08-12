@@ -3,10 +3,11 @@ package promgrpc
 import (
 	"context"
 
-	"github.com/piotrkowalczuk/promgrpc/v4/internal/useragent"
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc/stats"
 	"google.golang.org/grpc/status"
+
+	"github.com/piotrkowalczuk/promgrpc/v4/internal/useragent"
 )
 
 // NewClientResponsesTotalCounterVec allocates a new Prometheus CounterVec for the client and given set of options.
@@ -59,11 +60,15 @@ func (h *ClientResponsesTotalStatsHandler) HandleRPC(ctx context.Context, stat s
 
 func (h *ClientResponsesTotalStatsHandler) labels(ctx context.Context, stat stats.RPCStats) []string {
 	tag := ctx.Value(tagRPCKey).(rpcTagLabels)
-	return []string{
+	specialLabelValues := []string{
 		status.Code(stat.(*stats.End).Error).String(),
 		tag.isFailFast,
 		tag.method,
 		tag.service,
 		h.uas.ClientSide(ctx, stat),
 	}
+	if h.options.additionalLabelValuesFn != nil {
+		specialLabelValues = append(specialLabelValues, h.options.additionalLabelValuesFn(ctx)...)
+	}
+	return specialLabelValues
 }

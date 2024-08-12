@@ -32,12 +32,11 @@ func NewServerResponsesTotalStatsHandler(vec *prometheus.CounterVec, opts ...Sta
 	h := &ServerResponsesTotalStatsHandler{
 		baseStatsHandler: baseStatsHandler{
 			collector: vec,
-			options: statsHandlerOptions{
-				handleRPCLabelFn: serverResponsesTotalLabels,
-			},
+			options:   statsHandlerOptions{},
 		},
 		vec: vec,
 	}
+	h.baseStatsHandler.options.handleRPCLabelFn = h.serverResponsesTotalLabels
 	h.applyOpts(opts...)
 
 	return h
@@ -53,12 +52,16 @@ func (h *ServerResponsesTotalStatsHandler) HandleRPC(ctx context.Context, stat s
 	}
 }
 
-func serverResponsesTotalLabels(ctx context.Context, stat stats.RPCStats) []string {
+func (h *ServerResponsesTotalStatsHandler) serverResponsesTotalLabels(ctx context.Context, stat stats.RPCStats) []string {
 	tag := ctx.Value(tagRPCKey).(rpcTagLabels)
-	return []string{
+	specialLabelValues := []string{
 		tag.clientUserAgent,
 		status.Code(stat.(*stats.End).Error).String(),
 		tag.method,
 		tag.service,
 	}
+	if h.options.additionalLabelValuesFn != nil {
+		specialLabelValues = append(specialLabelValues, h.options.additionalLabelValuesFn(ctx)...)
+	}
+	return specialLabelValues
 }

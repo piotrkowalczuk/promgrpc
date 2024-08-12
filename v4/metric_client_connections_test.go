@@ -2,21 +2,29 @@ package promgrpc_test
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/piotrkowalczuk/promgrpc/v4"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"google.golang.org/grpc/stats"
+
+	"github.com/piotrkowalczuk/promgrpc/v4"
 )
 
 func TestNewClientConnectionsStatsHandler(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx := promgrpc.DynamicLabelValuesToCtx(context.Background(), map[string]string{dynamicLabel: dynamicLabelValue})
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	h := promgrpc.NewClientConnectionsStatsHandler(promgrpc.NewClientConnectionsGaugeVec(promgrpc.CollectorWithNamespace("promgrpctest")))
+	collectorOpts, statsHandlerOpts := promgrpc.OptionsSplit(
+		promgrpc.CollectorWithNamespace("promgrpctest"),
+		promgrpc.CollectorStatsHandlerWithDynamicLabels([]string{dynamicLabel}),
+	)
+
+	h := promgrpc.NewClientConnectionsStatsHandler(promgrpc.NewClientConnectionsGaugeVec(collectorOpts...), statsHandlerOpts...)
 	ctx = h.TagConn(ctx, &stats.ConnTagInfo{
 		LocalAddr: &net.TCPAddr{
 			IP:   net.IPv4(1, 2, 3, 4),
@@ -52,9 +60,9 @@ func TestNewClientConnectionsStatsHandler(t *testing.T) {
 		# HELP promgrpctest_client_connections TODO
 		# TYPE promgrpctest_client_connections gauge
 	`
-	expected := `
-		promgrpctest_client_connections{ grpc_local_addr = "1.2.3.4", grpc_remote_addr = "4.3.2.1:8080" } 2
-	`
+	expected := fmt.Sprintf(`
+		promgrpctest_client_connections{ %s="%s",grpc_local_addr = "1.2.3.4", grpc_remote_addr = "4.3.2.1:8080" } 2
+	`, dynamicLabel, dynamicLabelValue)
 	if err := testutil.CollectAndCompare(h, strings.NewReader(metadata+expected), "promgrpctest_client_connections"); err != nil {
 		t.Fatal(err)
 	}

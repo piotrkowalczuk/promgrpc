@@ -34,3 +34,5 @@ type connTagLabels struct {
 type HandleRPCLabelFunc func(context.Context, stats.RPCStats) []string
 
 type TagRPCLabelFunc func(context.Context, *stats.RPCTagInfo) context.Context
+
+type AdditionalLabelValuesFunc func(ctx context.Context) []string

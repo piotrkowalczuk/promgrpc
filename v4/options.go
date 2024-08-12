@@ -1,6 +1,7 @@
 package promgrpc
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -16,21 +17,22 @@ type ShareableOption interface {
 type statsHandlerOptions struct {
 	// stats.ConnTagInfo carries no information about whether it is an incoming or outgoing connection.
 	// Use IsClient method if available.
-	client           bool
-	handleRPCLabelFn HandleRPCLabelFunc
-	tagRPCLabelFn    TagRPCLabelFunc
+	client                  bool
+	handleRPCLabelFn        HandleRPCLabelFunc
+	tagRPCLabelFn           TagRPCLabelFunc
+	additionalLabelValuesFn AdditionalLabelValuesFunc
 }
 
 // StatsHandlerOption configures a stats handler behaviour.
 type StatsHandlerOption interface {
-	apply(*statsHandlerOptions)
+	applyStatsHandlerOption(*statsHandlerOptions)
 }
 
 type funcStatsHandlerOption struct {
 	f func(*statsHandlerOptions)
 }
 
-func (o *funcStatsHandlerOption) apply(in *statsHandlerOptions) {
+func (o *funcStatsHandlerOption) applyStatsHandlerOption(in *statsHandlerOptions) {
 	o.f(in)
 }
 
@@ -66,21 +68,22 @@ func StatsHandlerWithTagRPCLabelsFunc(fn TagRPCLabelFunc) StatsHandlerOption {
 }
 
 type collectorOptions struct {
-	namespace   string
-	userAgent   string
-	constLabels prometheus.Labels
+	namespace     string
+	userAgent     string
+	constLabels   prometheus.Labels
+	dynamicLabels []string
 }
 
 // CollectorOption configures a collector.
 type CollectorOption interface {
-	apply(*collectorOptions)
+	applyCollectorOption(*collectorOptions)
 }
 
 type funcCollectorOption struct {
 	f func(*collectorOptions)
 }
 
-func (o *funcCollectorOption) apply(in *collectorOptions) {
+func (o *funcCollectorOption) applyCollectorOption(in *collectorOptions) {
 	o.f(in)
 }
 
@@ -108,6 +111,30 @@ func newFuncShareableCollectorOption(f func(*collectorOptions)) *funcShareableCo
 	}
 }
 
+// ShareableCollectorStatsHandlerOption is CollectorOption and StatsHandlerOption extended with shareable capability.
+type ShareableCollectorStatsHandlerOption interface {
+	ShareableOption
+	CollectorOption
+	StatsHandlerOption
+}
+
+type funcShareableCollectorStatsHandlerOption struct {
+	funcCollectorOption
+	funcStatsHandlerOption
+}
+
+func (o *funcShareableCollectorStatsHandlerOption) shareable() {}
+
+func newFuncShareableCollectorStatsHandlerOption(
+	fC func(*collectorOptions),
+	fSH func(options *statsHandlerOptions),
+) *funcShareableCollectorStatsHandlerOption {
+	return &funcShareableCollectorStatsHandlerOption{
+		funcCollectorOption:    funcCollectorOption{f: fC},
+		funcStatsHandlerOption: funcStatsHandlerOption{f: fSH},
+	}
+}
+
 // CollectorWithNamespace returns a ShareableCollectorOption which sets namespace of a collector.
 func CollectorWithNamespace(namespace string) ShareableCollectorOption {
 	return newFuncShareableCollectorOption(func(o *collectorOptions) {
@@ -129,26 +156,31 @@ func CollectorWithConstLabels(constLabels prometheus.Labels) ShareableCollectorO
 	})
 }
 
-func applyCollectorOptions(prototype prometheus.Opts, opts ...CollectorOption) prometheus.Opts {
-	var options collectorOptions
-	for _, opt := range opts {
-		opt.apply(&options)
-	}
-
-	if options.namespace != "" {
-		prototype.Namespace = options.namespace
-	}
-	if options.constLabels != nil {
-		prototype.ConstLabels = options.constLabels
-	}
-
-	return prototype
+// CollectorStatsHandlerWithDynamicLabels returns a ShareableCollectorStatsHandlerOption
+// which adds a set of dynamic labels to a collector,
+// provide a func to fetch label values from context
+func CollectorStatsHandlerWithDynamicLabels(dynamicLabels []string) ShareableCollectorStatsHandlerOption {
+	return newFuncShareableCollectorStatsHandlerOption(
+		func(o *collectorOptions) {
+			o.dynamicLabels = dynamicLabels
+		},
+		func(o *statsHandlerOptions) {
+			o.additionalLabelValuesFn = func(ctx context.Context) []string {
+				res := make([]string, 0, len(dynamicLabels))
+				valuesFromCtx := DynamicLabelValuesFromCtx(ctx)
+				for _, label := range dynamicLabels {
+					res = append(res, valuesFromCtx[label])
+				}
+				return res
+			}
+		},
+	)
 }
 
-func applyHistogramOptions(prototype prometheus.HistogramOpts, opts ...CollectorOption) prometheus.HistogramOpts {
+func applyCollectorOptions(prototype prometheus.Opts, opts ...CollectorOption) (prometheus.Opts, []string) {
 	var options collectorOptions
 	for _, opt := range opts {
-		opt.apply(&options)
+		opt.applyCollectorOption(&options)
 	}
 
 	if options.namespace != "" {
@@ -158,5 +190,21 @@ func applyHistogramOptions(prototype prometheus.HistogramOpts, opts ...Collector
 		prototype.ConstLabels = options.constLabels
 	}
 
-	return prototype
+	return prototype, options.dynamicLabels
+}
+
+func applyHistogramOptions(prototype prometheus.HistogramOpts, opts ...CollectorOption) (prometheus.HistogramOpts, []string) {
+	var options collectorOptions
+	for _, opt := range opts {
+		opt.applyCollectorOption(&options)
+	}
+
+	if options.namespace != "" {
+		prototype.Namespace = options.namespace
+	}
+	if options.constLabels != nil {
+		prototype.ConstLabels = options.constLabels
+	}
+
+	return prototype, options.dynamicLabels
 }

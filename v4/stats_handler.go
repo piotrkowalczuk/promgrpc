@@ -35,10 +35,10 @@ func NewStatsHandler(handlers ...StatsHandlerCollector) *StatsHandler {
 
 // ClientStatsHandler instantiates a default client-side coordinator together with every metric specific stats handler provided by this package.
 func ClientStatsHandler(opts ...ShareableOption) *StatsHandler {
-	collectorOpts, statsHandlerOpts := optionsSplit(opts...)
+	collectorOpts, statsHandlerOpts := OptionsSplit(opts...)
 
 	return NewStatsHandler(
-		NewClientConnectionsStatsHandler(NewClientConnectionsGaugeVec(collectorOpts...)),
+		NewClientConnectionsStatsHandler(NewClientConnectionsGaugeVec(collectorOpts...), statsHandlerOpts...),
 		NewClientRequestsTotalStatsHandler(NewClientRequestsTotalCounterVec(collectorOpts...), statsHandlerOpts...),
 		NewClientRequestsInFlightStatsHandler(NewClientRequestsInFlightGaugeVec(collectorOpts...), statsHandlerOpts...),
 		NewClientRequestDurationStatsHandler(NewClientRequestDurationHistogramVec(collectorOpts...), statsHandlerOpts...),
@@ -52,10 +52,10 @@ func ClientStatsHandler(opts ...ShareableOption) *StatsHandler {
 
 // ServerStatsHandler instantiates a default server-side coordinator together with every metric specific stats handler provided by this package.
 func ServerStatsHandler(opts ...ShareableOption) *StatsHandler {
-	collectorOpts, statsHandlerOpts := optionsSplit(opts...)
+	collectorOpts, statsHandlerOpts := OptionsSplit(opts...)
 
 	return NewStatsHandler(
-		NewServerConnectionsStatsHandler(NewServerConnectionsGaugeVec(collectorOpts...)),
+		NewServerConnectionsStatsHandler(NewServerConnectionsGaugeVec(collectorOpts...), statsHandlerOpts...),
 		NewServerRequestsTotalStatsHandler(NewServerRequestsTotalCounterVec(collectorOpts...), statsHandlerOpts...),
 		NewServerRequestsInFlightStatsHandler(NewServerRequestsInFlightGaugeVec(collectorOpts...), statsHandlerOpts...),
 		NewServerRequestDurationStatsHandler(NewServerRequestDurationHistogramVec(collectorOpts...), statsHandlerOpts...),
@@ -172,23 +172,26 @@ func (h *baseStatsHandler) Collect(in chan<- prometheus.Metric) {
 
 func (h *baseStatsHandler) applyOpts(opts ...StatsHandlerOption) {
 	for _, opt := range opts {
-		opt.apply(&h.options)
+		opt.applyStatsHandlerOption(&h.options)
 	}
 }
 
-func optionsSplit(opts ...ShareableOption) ([]CollectorOption, []StatsHandlerOption) {
+func OptionsSplit(opts ...ShareableOption) ([]CollectorOption, []StatsHandlerOption) {
 	var (
 		collectorOpts    []CollectorOption
 		statsHandlerOpts []StatsHandlerOption
 	)
 
 	for _, opt := range opts {
-		switch val := opt.(type) {
-		case StatsHandlerOption:
-			statsHandlerOpts = append(statsHandlerOpts, val)
-		case CollectorOption:
-			collectorOpts = append(collectorOpts, val)
-		default:
+		valSh, shOk := opt.(StatsHandlerOption)
+		if shOk {
+			statsHandlerOpts = append(statsHandlerOpts, valSh)
+		}
+		valC, cOk := opt.(CollectorOption)
+		if cOk {
+			collectorOpts = append(collectorOpts, valC)
+		}
+		if !shOk && !cOk {
 			panic(fmt.Sprintf("shareable option does not implement any known type: %T", opt))
 		}
 	}

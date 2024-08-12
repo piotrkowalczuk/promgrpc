@@ -5,10 +5,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/piotrkowalczuk/promgrpc/v4"
-	"github.com/piotrkowalczuk/promgrpc/v4/pb/private/test"
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"
+
+	"github.com/piotrkowalczuk/promgrpc/v4"
+	"github.com/piotrkowalczuk/promgrpc/v4/pb/private/test"
+)
+
+const (
+	dynamicLabel      = "dynamicLabelTest"
+	dynamicLabelValue = "testvalue"
 )
 
 func suite(t *testing.T) (test.TestServiceClient, *prometheus.Registry, func(*testing.T)) {

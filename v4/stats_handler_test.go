@@ -8,12 +8,25 @@ import (
 	"testing"
 	"time"
 
-	"github.com/piotrkowalczuk/promgrpc/v4/internal/testutil"
-	"github.com/piotrkowalczuk/promgrpc/v4/pb/private/test"
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"
+
+	"github.com/piotrkowalczuk/promgrpc/v4"
+	"github.com/piotrkowalczuk/promgrpc/v4/internal/testutil"
+	"github.com/piotrkowalczuk/promgrpc/v4/pb/private/test"
 )
 
+func Test_OptionsSplit(t *testing.T) {
+	t.Run("ShareableCollectorStatsHandlerOption belongs to both", func(t *testing.T) {
+		collectorOptions, statsHandlerOptions := promgrpc.OptionsSplit(promgrpc.CollectorStatsHandlerWithDynamicLabels([]string{"test"}))
+		if len(collectorOptions) == 0 {
+			t.Errorf("CollectorOptions is empty")
+		}
+		if len(statsHandlerOptions) == 0 {
+			t.Errorf("StatsHandlerOptions is empty")
+		}
+	})
+}
 func TestStatsHandler(t *testing.T) {
 	t.Parallel()
 

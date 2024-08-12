@@ -55,10 +55,14 @@ func (h *ClientRequestsTotalStatsHandler) HandleRPC(ctx context.Context, stat st
 
 func (h *ClientRequestsTotalStatsHandler) labels(ctx context.Context, sts stats.RPCStats) []string {
 	tag := ctx.Value(tagRPCKey).(rpcTagLabels)
-	return []string{
+	specialLabelValues := []string{
 		tag.isFailFast,
 		tag.method,
 		tag.service,
 		h.uas.ClientSide(ctx, sts),
 	}
+	if h.options.additionalLabelValuesFn != nil {
+		specialLabelValues = append(specialLabelValues, h.options.additionalLabelValuesFn(ctx)...)
+	}
+	return specialLabelValues
 }

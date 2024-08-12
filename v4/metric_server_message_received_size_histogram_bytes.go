@@ -26,12 +26,11 @@ func NewServerMessageReceivedSizeStatsHandler(vec prometheus.ObserverVec, opts .
 	h := &ServerMessageReceivedSizeStatsHandler{
 		baseStatsHandler: baseStatsHandler{
 			collector: vec,
-			options: statsHandlerOptions{
-				handleRPCLabelFn: serverMessageReceivedSizeLabels,
-			},
+			options:   statsHandlerOptions{},
 		},
 		vec: vec,
 	}
+	h.baseStatsHandler.options.handleRPCLabelFn = h.serverMessageReceivedSizeLabels
 	h.applyOpts(opts...)
 
 	return h
@@ -47,11 +46,15 @@ func (h *ServerMessageReceivedSizeStatsHandler) HandleRPC(ctx context.Context, s
 	}
 }
 
-func serverMessageReceivedSizeLabels(ctx context.Context, _ stats.RPCStats) []string {
+func (h *ServerMessageReceivedSizeStatsHandler) serverMessageReceivedSizeLabels(ctx context.Context, _ stats.RPCStats) []string {
 	tag := ctx.Value(tagRPCKey).(rpcTagLabels)
-	return []string{
+	specialLabelValues := []string{
 		tag.clientUserAgent,
 		tag.method,
 		tag.service,
 	}
+	if h.options.additionalLabelValuesFn != nil {
+		specialLabelValues = append(specialLabelValues, h.options.additionalLabelValuesFn(ctx)...)
+	}
+	return specialLabelValues
 }

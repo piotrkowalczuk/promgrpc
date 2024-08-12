@@ -18,8 +18,8 @@ type ClientConnectionsStatsHandler struct {
 }
 
 // NewClientConnectionsStatsHandler ...
-func NewClientConnectionsStatsHandler(vec *prometheus.GaugeVec) *ClientConnectionsStatsHandler {
-	return &ClientConnectionsStatsHandler{
+func NewClientConnectionsStatsHandler(vec *prometheus.GaugeVec, opts ...StatsHandlerOption) *ClientConnectionsStatsHandler {
+	h := &ClientConnectionsStatsHandler{
 		baseStatsHandler: baseStatsHandler{
 			collector: vec,
 			options: statsHandlerOptions{
@@ -28,6 +28,8 @@ func NewClientConnectionsStatsHandler(vec *prometheus.GaugeVec) *ClientConnectio
 		},
 		vec: vec,
 	}
+	h.applyOpts(opts...)
+	return h
 }
 
 // HandleConn HandleRPC processes the RPC stats.
@@ -48,8 +50,13 @@ func (h *ClientConnectionsStatsHandler) HandleConn(ctx context.Context, stat sta
 
 func (h *ClientConnectionsStatsHandler) labels(ctx context.Context) []string {
 	tag := ctx.Value(tagConnKey).(connTagLabels)
-	return []string{
+
+	specialLabelValues := []string{
 		tag.remoteAddr,
 		tag.localAddr,
 	}
+	if h.options.additionalLabelValuesFn != nil {
+		specialLabelValues = append(specialLabelValues, h.options.additionalLabelValuesFn(ctx)...)
+	}
+	return specialLabelValues
 }
