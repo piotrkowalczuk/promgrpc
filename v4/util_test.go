@@ -2,6 +2,7 @@ package promgrpc_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -9,12 +10,13 @@ import (
 	"github.com/piotrkowalczuk/promgrpc/v4/pb/private/test"
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 func suite(t *testing.T) (test.TestServiceClient, *prometheus.Registry, func(*testing.T)) {
 	lis := listener(t)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	_, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	ssh := promgrpc.ServerStatsHandler(
@@ -33,24 +35,27 @@ func suite(t *testing.T) (test.TestServiceClient, *prometheus.Registry, func(*te
 	registerCollector(t, reg, csh)
 
 	go func() {
-		if err := srv.Serve(lis); err != grpc.ErrServerStopped {
+		if err := srv.Serve(lis); !errors.Is(err, grpc.ErrServerStopped) {
 			if err != nil {
 				t.Error(err)
 			}
 		}
 	}()
 
-	con, err := grpc.DialContext(ctx, lis.Addr().String(),
-		grpc.WithInsecure(),
-		grpc.WithBlock(),
+	cli, err := grpc.NewClient(lis.Addr().String(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithStatsHandler(csh),
-		grpc.WithUserAgent("test"),
-	)
+		grpc.WithUserAgent("test"))
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(func() {
+		if err := cli.Close(); err != nil {
+			t.Error(err)
+		}
+	})
 
-	return test.NewTestServiceClient(con), reg, func(t *testing.T) {
+	return test.NewTestServiceClient(cli), reg, func(t *testing.T) {
 		srv.GracefulStop()
 	}
 }

@@ -61,11 +61,7 @@ func BenchmarkUnary_all(b *testing.B) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	con, err := grpc.DialContext(ctx, lis.Addr().String(),
-		grpc.WithInsecure(),
-		grpc.WithBlock(),
-		grpc.WithStatsHandler(csh),
-	)
+	con, err := grpc.NewClient(lis.Addr().String(), grpc.WithStatsHandler(csh))
 	if err != nil {
 		b.Fatal(err)
 	}
