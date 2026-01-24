@@ -25,6 +25,7 @@ func newMessageReceivedSizeHistogramVec(sub string, labels []string, opts ...Col
 		Subsystem: strings.ToLower(sub),
 		Name:      "message_received_size_histogram_bytes",
 		Help:      "TODO",
+		Buckets:   prometheus.ExponentialBuckets(32, 3, 20), // 32B to 16MB
 	}
 	return prometheus.NewHistogramVec(
 		applyHistogramOptions(prototype, opts...), labels,
@@ -37,6 +38,7 @@ func newMessageSentSizeHistogramVec(sub string, labels []string, opts ...Collect
 		Subsystem: strings.ToLower(sub),
 		Name:      "message_sent_size_histogram_bytes",
 		Help:      "TODO",
+		Buckets:   prometheus.ExponentialBuckets(32, 3, 20), // 32B to 16MB
 	}
 	return prometheus.NewHistogramVec(
 		applyHistogramOptions(prototype, opts...), labels,
