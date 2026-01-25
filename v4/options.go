@@ -131,14 +131,20 @@ func CollectorWithConstLabels(constLabels prometheus.Labels) ShareableCollectorO
 	})
 }
 
-// CollectorWithMessageReceivedMaxSize ...
+// CollectorWithMessageReceivedMaxSize returns a ShareableCollectorOption that caps
+// the generated histogram buckets for received message sizes (in bytes). If the
+// size is not provided, a default of 4MB is used to mirror gRPC's configuration.
+// Use in combination with grpc.MaxRecvMsgSize.
 func CollectorWithMessageReceivedMaxSize(s int) ShareableCollectorOption {
 	return newFuncShareableCollectorOption(func(o *collectorOptions) {
 		o.maxReceivedMsgSize = s
 	})
 }
 
-// CollectorWithMessageSendMaxSize ...
+// CollectorWithMessageSendMaxSize returns a ShareableCollectorOption that caps the
+// generated histogram buckets for sent message sizes (in bytes). If unset, the
+// limit falls back to the gRPC default of 4MB to stay aligned with its settings.
+// Use in combination with grpc.MaxSendMsgSize.
 func CollectorWithMessageSendMaxSize(s int) ShareableCollectorOption {
 	return newFuncShareableCollectorOption(func(o *collectorOptions) {
 		o.maxSendMsgSize = s
