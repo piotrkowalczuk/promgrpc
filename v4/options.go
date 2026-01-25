@@ -66,9 +66,11 @@ func StatsHandlerWithTagRPCLabelsFunc(fn TagRPCLabelFunc) StatsHandlerOption {
 }
 
 type collectorOptions struct {
-	namespace   string
-	userAgent   string
-	constLabels prometheus.Labels
+	namespace          string
+	userAgent          string
+	constLabels        prometheus.Labels
+	maxSendMsgSize     int
+	maxReceivedMsgSize int
 }
 
 // CollectorOption configures a collector.
@@ -126,6 +128,20 @@ func CollectorWithUserAgent(name, version string) ShareableCollectorOption {
 func CollectorWithConstLabels(constLabels prometheus.Labels) ShareableCollectorOption {
 	return newFuncShareableCollectorOption(func(o *collectorOptions) {
 		o.constLabels = constLabels
+	})
+}
+
+// CollectorWithMessageReceivedMaxSize ...
+func CollectorWithMessageReceivedMaxSize(s int) ShareableCollectorOption {
+	return newFuncShareableCollectorOption(func(o *collectorOptions) {
+		o.maxReceivedMsgSize = s
+	})
+}
+
+// CollectorWithMessageSendMaxSize ...
+func CollectorWithMessageSendMaxSize(s int) ShareableCollectorOption {
+	return newFuncShareableCollectorOption(func(o *collectorOptions) {
+		o.maxSendMsgSize = s
 	})
 }
 

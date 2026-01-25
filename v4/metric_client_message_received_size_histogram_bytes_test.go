@@ -54,25 +54,25 @@ func TestNewClientMessageReceivedSizeStatsHandler(t *testing.T) {
 	`
 	expected := `
         promgrpctest_client_message_received_size_histogram_bytes_bucket{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service",le="32"} 3
-        promgrpctest_client_message_received_size_histogram_bytes_bucket{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service",le="96"} 3
-        promgrpctest_client_message_received_size_histogram_bytes_bucket{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service",le="288"} 3
-        promgrpctest_client_message_received_size_histogram_bytes_bucket{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service",le="864"} 3
-        promgrpctest_client_message_received_size_histogram_bytes_bucket{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service",le="2592"} 3
-        promgrpctest_client_message_received_size_histogram_bytes_bucket{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service",le="7776"} 3
-        promgrpctest_client_message_received_size_histogram_bytes_bucket{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service",le="23328"} 3
-        promgrpctest_client_message_received_size_histogram_bytes_bucket{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service",le="69984"} 3
-        promgrpctest_client_message_received_size_histogram_bytes_bucket{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service",le="209952"} 3
-        promgrpctest_client_message_received_size_histogram_bytes_bucket{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service",le="629856"} 3
-        promgrpctest_client_message_received_size_histogram_bytes_bucket{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service",le="1.889568e+06"} 3
-        promgrpctest_client_message_received_size_histogram_bytes_bucket{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service",le="5.668704e+06"} 3
-        promgrpctest_client_message_received_size_histogram_bytes_bucket{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service",le="1.7006112e+07"} 3
-        promgrpctest_client_message_received_size_histogram_bytes_bucket{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service",le="5.1018336e+07"} 3
-        promgrpctest_client_message_received_size_histogram_bytes_bucket{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service",le="1.53055008e+08"} 3
-        promgrpctest_client_message_received_size_histogram_bytes_bucket{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service",le="4.59165024e+08"} 3
-        promgrpctest_client_message_received_size_histogram_bytes_bucket{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service",le="1.377495072e+09"} 3
-        promgrpctest_client_message_received_size_histogram_bytes_bucket{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service",le="4.132485216e+09"} 3
-        promgrpctest_client_message_received_size_histogram_bytes_bucket{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service",le="1.2397455648e+10"} 3
-        promgrpctest_client_message_received_size_histogram_bytes_bucket{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service",le="3.7192366944e+10"} 3
+		promgrpctest_client_message_received_size_histogram_bytes_bucket{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service",le="59.496662720538"} 3
+        promgrpctest_client_message_received_size_histogram_bytes_bucket{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service",le="110.6204023400455"} 3
+        promgrpctest_client_message_received_size_histogram_bytes_bucket{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service",le="205.67327400112185"} 3
+        promgrpctest_client_message_received_size_histogram_bytes_bucket{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service",le="382.40229418354824"} 3
+        promgrpctest_client_message_received_size_histogram_bytes_bucket{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service",le="710.9893850187037"} 3
+        promgrpctest_client_message_received_size_histogram_bytes_bucket{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service",le="1321.921738698142"} 3
+        promgrpctest_client_message_received_size_histogram_bytes_bucket{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service",le="2457.810369695954"} 3
+        promgrpctest_client_message_received_size_histogram_bytes_bucket{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service",le="4569.734831151281"} 3
+        promgrpctest_client_message_received_size_histogram_bytes_bucket{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service",le="8496.3741241032"} 3
+        promgrpctest_client_message_received_size_histogram_bytes_bucket{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service",le="15797.05955028983"} 3
+        promgrpctest_client_message_received_size_histogram_bytes_bucket{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service",le="29371.010126245237"} 3
+        promgrpctest_client_message_received_size_histogram_bytes_bucket{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service",le="54608.65885133497"} 3
+        promgrpctest_client_message_received_size_histogram_bytes_bucket{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service",le="101532.27991558747"} 3
+        promgrpctest_client_message_received_size_histogram_bytes_bucket{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service",le="188775.99416828004"} 3
+        promgrpctest_client_message_received_size_histogram_bytes_bucket{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service",le="350985.6767113877"} 3
+        promgrpctest_client_message_received_size_histogram_bytes_bucket{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service",le="652577.3883449133"} 3
+        promgrpctest_client_message_received_size_histogram_bytes_bucket{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service",le="1.213318024168964e+06"} 3
+        promgrpctest_client_message_received_size_histogram_bytes_bucket{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service",le="2.2558866642728257e+06"} 3
+        promgrpctest_client_message_received_size_histogram_bytes_bucket{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service",le="4.1943039999999953e+06"} 3
 		promgrpctest_client_message_received_size_histogram_bytes_sum{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service"} 15
 		promgrpctest_client_message_received_size_histogram_bytes_count{grpc_client_user_agent="fake-user-agent",grpc_is_fail_fast="true",grpc_method="Method",grpc_service="service"} 3
 	`
