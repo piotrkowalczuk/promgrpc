@@ -20,12 +20,17 @@ func newConnectionsGaugeVec(sub string, labels []string, opts ...CollectorOption
 }
 
 func newMessageReceivedSizeHistogramVec(sub string, labels []string, opts ...CollectorOption) *prometheus.HistogramVec {
+	var options collectorOptions
+	for _, opt := range opts {
+		opt.apply(&options)
+	}
+
 	prototype := prometheus.HistogramOpts{
 		Namespace: namespace,
 		Subsystem: strings.ToLower(sub),
 		Name:      "message_received_size_histogram_bytes",
 		Help:      "TODO",
-		Buckets:   prometheus.ExponentialBuckets(32, 3, 20), // 32B to 16MB
+		Buckets:   exponentialBucketsRangeForSize(float64(options.maxReceivedMsgSize), 20),
 	}
 	return prometheus.NewHistogramVec(
 		applyHistogramOptions(prototype, opts...), labels,
@@ -33,12 +38,17 @@ func newMessageReceivedSizeHistogramVec(sub string, labels []string, opts ...Col
 }
 
 func newMessageSentSizeHistogramVec(sub string, labels []string, opts ...CollectorOption) *prometheus.HistogramVec {
+	var options collectorOptions
+	for _, opt := range opts {
+		opt.apply(&options)
+	}
+
 	prototype := prometheus.HistogramOpts{
 		Namespace: namespace,
 		Subsystem: strings.ToLower(sub),
 		Name:      "message_sent_size_histogram_bytes",
 		Help:      "TODO",
-		Buckets:   prometheus.ExponentialBuckets(32, 3, 20), // 32B to 16MB
+		Buckets:   exponentialBucketsRangeForSize(float64(options.maxSendMsgSize), 20),
 	}
 	return prometheus.NewHistogramVec(
 		applyHistogramOptions(prototype, opts...), labels,

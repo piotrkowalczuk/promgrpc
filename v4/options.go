@@ -66,9 +66,11 @@ func StatsHandlerWithTagRPCLabelsFunc(fn TagRPCLabelFunc) StatsHandlerOption {
 }
 
 type collectorOptions struct {
-	namespace   string
-	userAgent   string
-	constLabels prometheus.Labels
+	namespace          string
+	userAgent          string
+	constLabels        prometheus.Labels
+	maxSendMsgSize     int
+	maxReceivedMsgSize int
 }
 
 // CollectorOption configures a collector.
@@ -126,6 +128,26 @@ func CollectorWithUserAgent(name, version string) ShareableCollectorOption {
 func CollectorWithConstLabels(constLabels prometheus.Labels) ShareableCollectorOption {
 	return newFuncShareableCollectorOption(func(o *collectorOptions) {
 		o.constLabels = constLabels
+	})
+}
+
+// CollectorWithMessageReceivedMaxSize returns a ShareableCollectorOption that caps
+// the generated histogram buckets for received message sizes (in bytes). If the
+// size is not provided prometheus.DefBuckets is used for backward compatibility.
+// Use in combination with grpc.MaxRecvMsgSize.
+func CollectorWithMessageReceivedMaxSize(s int) ShareableCollectorOption {
+	return newFuncShareableCollectorOption(func(o *collectorOptions) {
+		o.maxReceivedMsgSize = s
+	})
+}
+
+// CollectorWithMessageSendMaxSize returns a ShareableCollectorOption that caps the
+// generated histogram buckets for sent message sizes (in bytes). If the
+// size is not provided prometheus.DefBuckets is used for backward compatibility.
+// Use in combination with grpc.MaxSendMsgSize.
+func CollectorWithMessageSendMaxSize(s int) ShareableCollectorOption {
+	return newFuncShareableCollectorOption(func(o *collectorOptions) {
+		o.maxSendMsgSize = s
 	})
 }
 

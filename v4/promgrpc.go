@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc/stats"
 
 	"google.golang.org/grpc/metadata"
@@ -35,4 +36,15 @@ func userAgentOnServerSide(ctx context.Context, _ *stats.RPCTagInfo) string {
 		}
 	}
 	return notAvailable
+}
+
+func exponentialBucketsRangeForSize(limit float64, cardinality int) []float64 {
+	if limit <= 0 {
+		return prometheus.DefBuckets // for backward compatibility
+	}
+	if cardinality <= 1 {
+		cardinality = 20
+	}
+
+	return prometheus.ExponentialBucketsRange(32, limit, cardinality)
 }
