@@ -40,7 +40,7 @@ func userAgentOnServerSide(ctx context.Context, _ *stats.RPCTagInfo) string {
 
 func exponentialBucketsRangeForSize(limit float64, cardinality int) []float64 {
 	if limit <= 0 {
-		limit = 4 * 1024 * 1024
+		return prometheus.DefBuckets // for backward compatibility
 	}
 	if cardinality <= 1 {
 		cardinality = 20
