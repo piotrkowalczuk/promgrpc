@@ -2,6 +2,7 @@ package promgrpc
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"
@@ -66,11 +67,12 @@ func StatsHandlerWithTagRPCLabelsFunc(fn TagRPCLabelFunc) StatsHandlerOption {
 }
 
 type collectorOptions struct {
-	namespace          string
-	userAgent          string
-	constLabels        prometheus.Labels
-	maxSendMsgSize     int
-	maxReceivedMsgSize int
+	namespace           string
+	userAgent           string
+	constLabels         prometheus.Labels
+	maxSendMsgSize      int
+	maxReceivedMsgSize  int
+	maxRequestDuration  float64
 }
 
 // CollectorOption configures a collector.
@@ -148,6 +150,15 @@ func CollectorWithMessageReceivedMaxSize(s int) ShareableCollectorOption {
 func CollectorWithMessageSendMaxSize(s int) ShareableCollectorOption {
 	return newFuncShareableCollectorOption(func(o *collectorOptions) {
 		o.maxSendMsgSize = s
+	})
+}
+
+// CollectorWithMaxRequestDuration returns a ShareableCollectorOption that caps the
+// generated histogram buckets for request durations (in seconds). If the duration
+// is not provided prometheus.DefBuckets is used for backward compatibility.
+func CollectorWithMaxRequestDuration(d time.Duration) ShareableCollectorOption {
+	return newFuncShareableCollectorOption(func(o *collectorOptions) {
+		o.maxRequestDuration = d.Seconds()
 	})
 }
 

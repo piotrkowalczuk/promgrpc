@@ -79,11 +79,17 @@ func newMessagesSentTotalCounterVec(sub string, labels []string, opts ...Collect
 }
 
 func newRequestDurationHistogramVec(sub string, labels []string, opts ...CollectorOption) *prometheus.HistogramVec {
+	var options collectorOptions
+	for _, opt := range opts {
+		opt.apply(&options)
+	}
+
 	prototype := prometheus.HistogramOpts{
 		Namespace: namespace,
 		Subsystem: strings.ToLower(sub),
 		Name:      "request_duration_histogram_seconds",
 		Help:      "TODO",
+		Buckets:   exponentialBucketsRangeForDuration(options.maxRequestDuration, 20),
 	}
 	return prometheus.NewHistogramVec(
 		applyHistogramOptions(prototype, opts...),

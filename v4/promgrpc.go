@@ -48,3 +48,14 @@ func exponentialBucketsRangeForSize(limit float64, cardinality int) []float64 {
 
 	return prometheus.ExponentialBucketsRange(32, limit, cardinality)
 }
+
+func exponentialBucketsRangeForDuration(limit float64, cardinality int) []float64 {
+	if limit <= 0 {
+		return prometheus.DefBuckets // for backward compatibility
+	}
+	if cardinality <= 1 {
+		cardinality = 20
+	}
+
+	return prometheus.ExponentialBucketsRange(0.001, limit, cardinality)
+}
