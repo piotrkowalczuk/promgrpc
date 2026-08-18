@@ -67,12 +67,12 @@ func StatsHandlerWithTagRPCLabelsFunc(fn TagRPCLabelFunc) StatsHandlerOption {
 }
 
 type collectorOptions struct {
-	namespace           string
-	userAgent           string
-	constLabels         prometheus.Labels
-	maxSendMsgSize      int
-	maxReceivedMsgSize  int
-	maxRequestDuration  float64
+	namespace          string
+	userAgent          string
+	constLabels        prometheus.Labels
+	maxSendMsgSize     int
+	maxReceivedMsgSize int
+	maxRequestDuration float64
 }
 
 // CollectorOption configures a collector.

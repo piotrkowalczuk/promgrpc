@@ -125,3 +125,40 @@ func TestNewServerMessageSentSizeStatsHandler_300KB(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// TestNewServerMessageSentSizeStatsHandler_32B covers a max size equal to the
+// lowest generated bucket, which used to panic on the first observed message.
+func TestNewServerMessageSentSizeStatsHandler_32B(t *testing.T) {
+	const size = 32
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	h := promgrpc.NewStatsHandler(promgrpc.NewServerMessageSentSizeStatsHandler(
+		promgrpc.NewServerMessageSentSizeHistogramVec(
+			promgrpc.CollectorWithMessageSendMaxSize(size),
+		),
+	))
+	ctx = metadata.NewIncomingContext(ctx, metadata.MD{"user-agent": []string{"fake-user-agent"}})
+	ctx = h.TagRPC(ctx, &stats.RPCTagInfo{
+		FullMethodName: "/service/Method",
+		FailFast:       true,
+	})
+	h.HandleRPC(ctx, &stats.OutPayload{
+		Length: size,
+	})
+
+	const md = `
+		# HELP grpc_server_message_sent_size_histogram_bytes TODO
+        # TYPE grpc_server_message_sent_size_histogram_bytes histogram
+	`
+	expected := `
+		grpc_server_message_sent_size_histogram_bytes_bucket{grpc_client_user_agent="fake-user-agent",grpc_method="Method",grpc_service="service",le="32"} 1
+        grpc_server_message_sent_size_histogram_bytes_bucket{grpc_client_user_agent="fake-user-agent",grpc_method="Method",grpc_service="service",le="+Inf"} 1
+        grpc_server_message_sent_size_histogram_bytes_sum{grpc_client_user_agent="fake-user-agent",grpc_method="Method",grpc_service="service"} 32
+        grpc_server_message_sent_size_histogram_bytes_count{grpc_client_user_agent="fake-user-agent",grpc_method="Method",grpc_service="service"} 1
+	`
+
+	if err := testutil.CollectAndCompare(h, strings.NewReader(md+expected), "grpc_server_message_sent_size_histogram_bytes"); err != nil {
+		t.Fatal(err)
+	}
+}

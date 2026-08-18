@@ -71,7 +71,7 @@ func TestNewServerRequestDurationStatsHandler_30s(t *testing.T) {
         grpc_server_request_duration_histogram_seconds_bucket{grpc_client_user_agent="fake-user-agent",grpc_code="OK",grpc_method="Method",grpc_service="service",le="5.891248909742982"} 0
         grpc_server_request_duration_histogram_seconds_bucket{grpc_client_user_agent="fake-user-agent",grpc_code="OK",grpc_method="Method",grpc_service="service",le="10.13550362179168"} 0
         grpc_server_request_duration_histogram_seconds_bucket{grpc_client_user_agent="fake-user-agent",grpc_code="OK",grpc_method="Method",grpc_service="service",le="17.437462792899368"} 0
-        grpc_server_request_duration_histogram_seconds_bucket{grpc_client_user_agent="fake-user-agent",grpc_code="OK",grpc_method="Method",grpc_service="service",le="29.999999999999947"} 3
+        grpc_server_request_duration_histogram_seconds_bucket{grpc_client_user_agent="fake-user-agent",grpc_code="OK",grpc_method="Method",grpc_service="service",le="30"} 3
         grpc_server_request_duration_histogram_seconds_bucket{grpc_client_user_agent="fake-user-agent",grpc_code="OK",grpc_method="Method",grpc_service="service",le="+Inf"} 3
         grpc_server_request_duration_histogram_seconds_sum{grpc_client_user_agent="fake-user-agent",grpc_code="OK",grpc_method="Method",grpc_service="service"} 75
         grpc_server_request_duration_histogram_seconds_count{grpc_client_user_agent="fake-user-agent",grpc_code="OK",grpc_method="Method",grpc_service="service"} 3
